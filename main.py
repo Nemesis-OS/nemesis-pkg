@@ -78,12 +78,24 @@ def list_packages_from_repo(query: list[str]):
     print(f"checking if {query} is in repos...")
     PKGLIST = open(path_pkglist , "r+")
     PKGLIST_AVAILABLE = PKGLIST.read()
-    for i in range(0 , len(query)):
-        if query[i] in PKGLIST_AVAILABLE:
-            print(f"{ANSI_CODES[3]}info:-{ANSI_CODES[4]} {query[i]} is available in repo")
-        else:
-            print(f"{ANSI_CODES[0]}error:-{ANSI_CODES[4]} {query[i]} is not available") 
-            
+    PKGLIST_AVAILABLE = PKGLIST_AVAILABLE.splitlines()
+    if query == []:
+        print(f"{ANSI_CODES[2]}warning{ANSI_CODES[4]}: no query specified so printing the list of available packages")
+        for i in PKGLIST_AVAILABLE:
+            print(i)
+    else:
+        for i in range(len(query)):
+            qry = list(query[i])
+            print(f"{ANSI_CODES[3]}info{ANSI_CODES[4]}: searching {query[i]}...")
+            for j in PKGLIST_AVAILABLE:
+                char_count = 0
+                if qry[i] in j == True:
+                    char_count += 1
+                    print(j)
+                else:
+                    continue
+            continue
+                                                    
 if __name__ == "__main__":
     if current_user != b'root\n':
         print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: user is not root")
@@ -106,4 +118,3 @@ if __name__ == "__main__":
             print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: invalid operation")
     except IndexError:
         print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: no operation specified")
-
