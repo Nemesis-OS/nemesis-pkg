@@ -82,7 +82,7 @@ def list_packages_from_repo(query: list[str]):
         if query[i] in PKGLIST_AVAILABLE:
             print(f"{ANSI_CODES[3]}info:-{ANSI_CODES[4]} {query[i]} is available in repo")
         else:
-            print(f"{ANSI_CODES[1]}error:-{ANSI_CODES[4]} {query[i]} is not available") 
+            print(f"{ANSI_CODES[0]}error:-{ANSI_CODES[4]} {query[i]} is not available") 
             
 if __name__ == "__main__":
     if current_user != b'root\n':
@@ -95,14 +95,15 @@ if __name__ == "__main__":
         if argv[1] == "h":
             print(mainpage)
         elif argv[1] == "v":
-            print("nemesis-pkg 0.1(Build 2361)")
+            print("nemesis-pkg 0.1(Build 2362)")
         elif argv[1] == "ud":
             update_database()
         elif argv[1] == "lri":
-            for i in range(2, len(argv)-1):
+            for i in range(2, len(argv)):
                 cmd_args.append(argv[i])
             list_packages_from_repo(cmd_args)
         else:
-            print("error: invalid operation")
+            print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: invalid operation")
     except IndexError:
-        print("error: no operation specified")
+        print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: no operation specified")
+
