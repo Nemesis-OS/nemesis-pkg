@@ -84,14 +84,24 @@ def list_packages_from_repo(query: list[str]):
             print(i)
     else:
         for i in range(0 , len(query)):
-            print(f"{ANSI_CODES[3]}info{ANSI_CODES[4]}: checking if {query[i]} is in repo..")
+            pkgs_matching = []
             qry = list(query[i])
-            if PKGLIST_AVAILABLE[i].find(qry[i]) != -1:
-                print(f"{ANSI_CODES[2]}note{ANSI_CODES[4]}: there are some packages that which match to {query[i]}")
-                print(PKGLIST_AVAILABLE[i])
+            for j in PKGLIST_AVAILABLE:
+                if j.find(qry[i]) == -1:
+                    continue
+                else:
+                    pkgs_matching.append(j)
+                    continue
+                    
+            if pkgs_matching == []:
+                print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: no package was relevant to {query[i]}")
             else:
-                continue            
-                                             
+                print(f"{ANSI_CODES[2]}note{ANSI_CODES[4]}: there were some packages matching to {query[i]}..")
+                for matching_pkgs in pkgs_matching:
+                    print(matching_pkgs)
+
+            continue
+                   
 if __name__ == "__main__":
     if current_user != b'root\n':
         print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: user is not root")
@@ -103,7 +113,7 @@ if __name__ == "__main__":
         if argv[1] == "h":
             print(mainpage)
         elif argv[1] == "v":
-            print("nemesis-pkg 0.1(Build 2362)")
+            print("nemesis-pkg 0.1(Build 2363)")
         elif argv[1] == "ud":
             update_database()
         elif argv[1] == "lri":
