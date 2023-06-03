@@ -1,7 +1,10 @@
-from sys import argv, exit 
+from sys import argv, exit
 from requests import get
 from subprocess import check_output 
-from os.path import isfile 
+from os.path import isfile
+from os.path import isdir 
+from os import mkdir 
+from os import chdir
 from shutil import copy
 from requests.exceptions import MissingSchema, ConnectionError
 
@@ -41,6 +44,9 @@ def update_database():
     else:
         local_PKGLIST = False
         print(f"{ANSI_CODES[2]}warning{ANSI_CODES[4]}: database file is not found on path so downloading it")
+        print(f"{ANSI_CODES[3]}info{ANSI_CODES[4]}: creating database file")
+        if isdir("/etc/nemesis-pkg") == False:
+            mkdir("/etc/nemesis-pkg")
         pass
 
     print(f"{ANSI_CODES[3]}info{ANSI_CODES[4]}: downloading database..")
