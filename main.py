@@ -13,8 +13,7 @@ ANSI_CODES = [
     "\x1b[0m"
 ]
 
-mainpage = """
-nemesis-pkg:
+mainpage = """nemesis-pkg:
 ============
 usage:- nemesis-pkg {operation} {args}
 ============
@@ -26,8 +25,8 @@ lri: lists packages in repository... nemesis-pkg lri {pkg}
 ug: upgrade packages... nemesis-pkg ug
 ud: update the package database... nemesis-pkg ud
 h: shows info on operations and usage.. nemesis-pkg h
-v: show nemesis-pkg version
-"""
+v: show nemesis-pkg version"""
+
 operations = ["i" , "r" , "lsi" , "lri" , "ug" , "ud" , "h" , "v"]
 path_pkglist = "/etc/nemesis-pkg/PKGLIST"
 path_ipkglist = "/etc/nemesis-pkg/IPKGLIST"
@@ -66,6 +65,7 @@ def update_database():
             local_PKGLIST.seek(0)
             local_PKGLIST.write(str(new_PKGLIST.content.decode("utf-8")))
             local_PKGLIST.truncate()
+            local_PKGLIST.close()
             pass
         else:
             print(f"{ANSI_CODES[3]}info{ANSI_CODES[4]}: you had the latest database")
@@ -75,7 +75,6 @@ def update_database():
 def list_packages_from_repo(query: list[str]):
     print(f"{ANSI_CODES[3]}info:{ANSI_CODES[4]} syncing the databases to get latest software")
     update_database()
-    print(f"checking if {query} is in repos...")
     PKGLIST = open(path_pkglist , "r+")
     PKGLIST_AVAILABLE = PKGLIST.read()
     PKGLIST_AVAILABLE = PKGLIST_AVAILABLE.splitlines()
@@ -84,18 +83,15 @@ def list_packages_from_repo(query: list[str]):
         for i in PKGLIST_AVAILABLE:
             print(i)
     else:
-        for i in range(len(query)):
+        for i in range(0 , len(query)):
+            print(f"{ANSI_CODES[3]}info{ANSI_CODES[4]}: checking if {query[i]} is in repo..")
             qry = list(query[i])
-            print(f"{ANSI_CODES[3]}info{ANSI_CODES[4]}: searching {query[i]}...")
-            for j in PKGLIST_AVAILABLE:
-                char_count = 0
-                if qry[i] in j == True:
-                    char_count += 1
-                    print(j)
-                else:
-                    continue
-            continue
-                                                    
+            if PKGLIST_AVAILABLE[i].find(qry[i]) != -1:
+                print(f"{ANSI_CODES[2]}note{ANSI_CODES[4]}: there are some packages that which match to {query[i]}")
+                print(PKGLIST_AVAILABLE[i])
+            else:
+                continue            
+                                             
 if __name__ == "__main__":
     if current_user != b'root\n':
         print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: user is not root")
