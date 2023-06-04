@@ -1,4 +1,4 @@
-from sys import argv, exit
+from sys import argv, exit 
 from requests import get
 from subprocess import check_output 
 from os.path import isfile
@@ -107,7 +107,22 @@ def list_packages_from_repo(query: list[str]):
                     print(matching_pkgs)
 
             continue
-                   
+
+def list_installed_packages(query: list[str]):
+    installed_packages = open(path_ipkglist, 'r')
+    installed_packages_content = installed_packages.read()
+    install_packages_content = installed_packages_content.splitlines()
+    if query == []:
+        for i in install_packages_content:
+            print(i)
+    else:
+        for i in range(0, len(query)):
+            print(f"{ANSI_CODES[3]}info{ANSI_CODES[4]}: checking if {query[i]} is installed or not")
+            if query[i] in install_packages_content:
+                print(f"note: {query[i]} is installed")
+            else:
+                print(f"error")
+    
 if __name__ == "__main__":
     if current_user != b'root\n':
         print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: user is not root")
@@ -126,6 +141,10 @@ if __name__ == "__main__":
             for i in range(2, len(argv)):
                 cmd_args.append(argv[i])
             list_packages_from_repo(cmd_args)
+        elif argv[1] == "lsi":
+            for i in range(2, len(argv)):
+                cmd_args.append(argv[i])
+            list_installed_packages(cmd_args)
         else:
             print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: invalid operation")
     except IndexError:
