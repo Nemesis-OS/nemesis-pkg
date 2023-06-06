@@ -119,22 +119,50 @@ def list_installed_packages(query: list[str]):
         for i in range(0, len(query)):
             print(f"{ANSI_CODES[3]}info{ANSI_CODES[4]}: checking if {query[i]} is installed or not")
             if query[i] in install_packages_content:
-                print(f"note: {query[i]} is installed")
+                print(f"{ANSI_CODES[2]}note{ANSI_CODES[4]}: {query[i]} is installed")
             else:
-                print(f"error")
-    
+                print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: {query[i]} is not installed")
+
+def check_if_important_files_are_there():
+    print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: nemesis-pkg is checking that some important files are there or not...")
+    if isdir("/etc/nemesis-pkg") == True and isfile("/etc/nemesis-pkg/IPKGLIST") == True and isfile("/etc/nemesis-pkg/PKGLIST") == True:
+        print(f"{ANSI_CODES[1]}sucess{ANSI_CODES[4]}: the neccesary files are present in the system")
+    else:
+        print(f"{ANSI_CODES[2]}warning{ANSI_CODES[4]}: some files were not found so nemesis-pkg is creating it")
+        
+    if isdir("/etc/nemesis-pkg") == False:
+        mkdir("/etc/nemesis-pkg/")
+    else:
+        pass
+
+    if isfile("/etc/nemesis-pkg/PKGLIST") == False:
+        file = open("/etc/nemesis-pkg/PKGLIST" , 'w')
+        file.write('')
+        file.close()
+    else:
+        pass
+        
+    if isfile("/etc/nemesis-pkg/IPKGLIST") == False:
+        file = open("/etc/nemesis-pkg/IPKGLIST" , 'w')
+        file.write('')
+        file.close()
+    else:
+        pass
+        
 if __name__ == "__main__":
     if current_user != b'root\n':
         print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: user is not root")
         exit(1)
     else:
         pass
+
+    check_if_important_files_are_there()
     
     try:
         if argv[1] == "h":
             print(mainpage)
         elif argv[1] == "v":
-            print("nemesis-pkg 0.1(Build 2363)")
+            print("nemesis-pkg 0.1(Build 2366)")
         elif argv[1] == "ud":
             update_database()
         elif argv[1] == "lri":
