@@ -1,5 +1,5 @@
 # nemesis-pkg
-A fast and simple package manager for Nemesis inspired from `kiss` and `pacman`. `nemesis-pkg` firstly downloads source code and compiles it.. we have bootstrap packages also that can be used for bootstrapping a package.. 
+A fast and simple package manager for Nemesis inspired from `kiss` and `pacman`. This is completely written from scratch...
 
 # usage:-
 `nemsis-pkg` has various flags that performs operations and some operations have their args.
