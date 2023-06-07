@@ -1,10 +1,8 @@
 from sys import argv, exit 
 from requests import get
 from subprocess import check_output 
-from os.path import isfile
-from os.path import isdir 
-from os import mkdir 
-from os import chdir
+from os.path import isfile, isdir
+from os import mkdir, chdir
 from shutil import copy
 from requests.exceptions import MissingSchema, ConnectionError
 
