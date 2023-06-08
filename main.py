@@ -129,18 +129,18 @@ def check_if_important_files_are_there():
         print(f"{ANSI_CODES[2]}warning{ANSI_CODES[4]}: some files were not found so nemesis-pkg is creating it")
         
     if isdir("/etc/nemesis-pkg") == False:
+        print(f"{ANSI_CODES[3]}info{ANSI_CODES[4]}: creating /etc/nemesis-pkg")
         mkdir("/etc/nemesis-pkg/")
     else:
         pass
 
     if isfile("/etc/nemesis-pkg/PKGLIST") == False:
-        file = open("/etc/nemesis-pkg/PKGLIST" , 'w')
-        file.write('')
-        file.close()
+        update_database()        
     else:
         pass
         
     if isfile("/etc/nemesis-pkg/IPKGLIST") == False:
+        print(f"{ANSI_CODES[3]}info{ANSI_CODES[4]}: creating IPKGLIST")
         file = open("/etc/nemesis-pkg/IPKGLIST" , 'w')
         file.write('')
         file.close()
@@ -148,19 +148,28 @@ def check_if_important_files_are_there():
         pass
 
 def upgrade_packages():
-    print("info: in order to check for the latest packages the database needs to be synced")
+    print(f"{ANSI_CODES[3]}info{ANSI_CODES[4]}: in order to check for the latest packages the database needs to be synced")
     update_database()
     read_PKGLIST = open("/etc/nemesis-pkg/PKGLIST")
     read_IPKGLIST = open("/etc/nemesis-pkg/IPKGLIST" , 'r+')
-    content_PKGLIST = read_PKGLIST.read()
-    content_IPKGLIST = read_IPKGLIST.read()
+    content_PKGLIST = read_PKGLIST.read().splitlines()
+    content_IPKGLIST = read_IPKGLIST.read().splitlines()
     packages_to_update = []
     for i in range(0, len(content_PKGLIST)):
-        content_PKGLIST[i].split()
+        content_PKGLIST[i] = content_PKGLIST[i].split()
     for i in range(0, len(content_IPKGLIST)):
-        content_IPKGLIST.[i].split()
-    print(f"{ANSI_CODES[3]}info{ANSI_CODES[4]}: the following packages need to be updated")
-    
+        content_IPKGLIST[i] = content_IPKGLIST[i].split()
+    for j in content_IPKGLIST:
+        for i in content_PKGLIST:
+            if j[0] in i[0] and float(j[1]) > float(i[1]):
+                packages_to_update.append(f"{i[0]} {ANSI_CODES[0]}{i[1]}{ANSI_CODES[4]} {ANSI_CODES[3]}->{ANSI_CODES[4]} {j[0]} {ANSI_CODES[1]}{j[1]}{ANSI_CODES[4]}")
+                    
+    if packages_to_update == []:
+        print(f"{ANSI_CODES[2]}note{ANSI_CODES[4]}: all packages are up to date")
+    else:
+        print(f"{ANSI_CODES[3]}info{ANSI_CODES[4]}: these packages will be updated")
+        for i in packages_to_update:
+            print(i)
 
 if __name__ == "__main__":
     if current_user != b'root\n':
