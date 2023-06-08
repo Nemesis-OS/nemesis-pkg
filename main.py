@@ -146,7 +146,22 @@ def check_if_important_files_are_there():
         file.close()
     else:
         pass
-        
+
+def upgrade_packages():
+    print("info: in order to check for the latest packages the database needs to be synced")
+    update_database()
+    read_PKGLIST = open("/etc/nemesis-pkg/PKGLIST")
+    read_IPKGLIST = open("/etc/nemesis-pkg/IPKGLIST" , 'r+')
+    content_PKGLIST = read_PKGLIST.read()
+    content_IPKGLIST = read_IPKGLIST.read()
+    packages_to_update = []
+    for i in range(0, len(content_PKGLIST)):
+        content_PKGLIST[i].split()
+    for i in range(0, len(content_IPKGLIST)):
+        content_IPKGLIST.[i].split()
+    print(f"{ANSI_CODES[3]}info{ANSI_CODES[4]}: the following packages need to be updated")
+    
+
 if __name__ == "__main__":
     if current_user != b'root\n':
         print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: user is not root")
@@ -160,9 +175,11 @@ if __name__ == "__main__":
         if argv[1] == "h":
             print(mainpage)
         elif argv[1] == "v":
-            print("nemesis-pkg 0.1(Build 2366)")
+            print("nemesis-pkg 0.1(Build 2368)")
         elif argv[1] == "ud":
             update_database()
+        elif argv[1] == "ug":
+            upgrade_packages()
         elif argv[1] == "lri":
             for i in range(2, len(argv)):
                 cmd_args.append(argv[i])
