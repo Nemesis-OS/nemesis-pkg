@@ -11,9 +11,10 @@ except ImportError:
 
 disable_check_important_files = True
 ANSI_CODES = []
+REPOLIST = []
 
 def parse_config_file():
-    global disable_check_important_files, ANSI_CODES
+    global disable_check_important_files, ANSI_CODES, REPOLIST
     if isfile("/etc/nemesis-pkg/config.py") == True:
         pass
     else:
@@ -32,7 +33,39 @@ def parse_config_file():
         disable_check_important_files = False
     else:
         disable_check_important_files = True
-    
+
+    REPOLIST = config.REPOS
+
+def sync_packages(PKGLIST: list[list[str]]):
+    for i in range(0 , len(PKGLIST)):
+        fexists = False
+        print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: updating {ANSI_CODES[2]}{PKGLIST[i][1]}{ANSI_CODES[4]}")
+        if isfile(f"/etc/nemesis-pkg/{PKGLIST[i][1]}") == True:
+            fexists = True
+            plist = open(f"/etc/nemesis-pkg/{PKGLIST[i][1]}" , 'r+')
+            list_contents = plist.read()
+        else:
+            print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: {ANSI_CODES[2]}{PKGLIST[i][1]}{ANSI_CODES[4]} not found so creating it..")
+            plist = open(f"/etc/nemesis-pkg/{PKGLIST[i][1]}" , 'w')
+
+        downloaded_version = get(PKGLIST[i][0]).content.decode("utf-8")
+
+        if fexists == False:
+            plist.write(str(downloaded_version))
+            plist.close()
+            print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: made {ANSI_CODES[2]}{PKGLIST[i][1]}{ANSI_CODES[4]}")
+        elif list_contents != str(downloaded_version):
+            plist.seek(0)
+            plist.write(str(downloaded_version))
+            plist.truncate()
+            plist.close()
+            print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: {ANSI_CODES[2]}{PKGLIST[i][1]}{ANSI_CODES[4]} up to date")
+        else:
+            print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: {ANSI_CODES[2]}{PKGLIST[i][1]}{ANSI_CODES[4]} was up to date")
+
 VERSION = 0.1
+BUILD_NUM = 23615
 
-
+if __name__ == "__main__":
+    parse_config_file()
+    #sync_packages(REPOLIST)
