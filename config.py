@@ -10,3 +10,5 @@ REPOS = [
     ["https://raw.githubusercontent.com/Nemesis-OS/packages-release/main/release.PKGLIST" , "release.PKGLIST"],
     ["https://raw.githubusercontent.com/Nemesis-OS/packages-security/main/security.PKGLIST" , "security.PKGLIST"]
 ]
+
+check_nessary_files = True
