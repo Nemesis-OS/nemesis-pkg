@@ -19,6 +19,7 @@ def parse_config_file():
         pass
     else:
         print("error: config file not found")
+        exit(1)
         
     chdir("/etc/nemesis-pkg")
     path.append("/etc/nemesis-pkg")
