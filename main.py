@@ -1,8 +1,9 @@
 #!/usr/bin/python3
-from os import mkdir, chdir
+from os import mkdir, chdir, getlogin
 from os.path import isdir, isfile
 from sys import argv, exit, path
 from subprocess import check_output
+from time import strftime
 try:
     from requests import get
     from requests.exceptions import MissingSchema, ConnectionError
@@ -71,15 +72,44 @@ def sync_packages(PKGLIST: list[list[str]]):
         else:
             print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: {ANSI_CODES[2]}{PKGLIST[i][1]}{ANSI_CODES[4]} was up to date")
 
+        ctime = strftime("%D %H:%M:%S")
+        write_history(f"{ctime} {ANSI_CODES[2]}{PKGLIST[i][2]}{ANSI_CODES[4]} repo updated..")
+
+def write_history(current_opr: str):
+    history_npkg = False
+    if isfile(f"/home/{getlogin()}/.nemesis-pkg_history") == True:
+        history_npkg = True
+        history = open(f"/home/{getlogin()}/.nemesis-pkg_history" , 'r+')
+    else:
+        history = open(f"/home/{getlogin()}/.nemesis-pkg_history" , 'w')
+
+    if history_npkg == False:
+        history.write(current_opr)
+        history.close()
+    else:
+        history.seek(0)
+        historyc = history.read()
+        historyc = historyc + f"\n{current_opr}"
+        history.write(historyc)
+        history.truncate()
+        history.close()
+
 VERSION = 0.1
-BUILD_NUM = 23615
+BUILD_NUM = 23617
 
 if __name__ == "__main__":
     parse_config_file()
     try:
         if len(argv) > 1 and argv[1] == "update":
             sync_packages(REPOLIST)
-        elif len(argv) < 1 and argv[1] == "version" or argv[1] == "-v":
+        elif len(argv) > 1 and argv[1] == "version" or argv[1] == "-v":
             print(f"nemesis-pkg build {VERSION} {BUILD_NUM}")
+        elif len(argv) > 1 and argv[1] == "history":
+            file = open(f"/home/{getlogin()}/.nemesis-pkg_history")
+            print(f"{ANSI_CODES[3]}info{ANSI_CODES[4]}: this is the complete history of operations run by nemesis-pkg")
+            print(file.read())
+            file.close()
+        else:
+            print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: invalid operation")
     except IndexError:
         print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: no operation specified")
