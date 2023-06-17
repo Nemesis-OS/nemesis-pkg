@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 from os import mkdir, chdir
 from os.path import isdir, isfile
 from sys import argv, exit, path
