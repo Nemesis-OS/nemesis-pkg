@@ -38,7 +38,13 @@ def parse_config_file():
     REPOLIST = config.REPOS
 
 def sync_packages(PKGLIST: list[list[str]]):
-    for i in range(0 , len(PKGLIST)):
+    if check_output("whoami") != b'root\n':
+        print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: root user can only run update")
+        exit(1)
+    else:
+        pass
+    
+    for i in range(0 , len(PKGLIST)):                
         fexists = False
         print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: updating {ANSI_CODES[2]}{PKGLIST[i][1]}{ANSI_CODES[4]}")
         if isfile(f"/etc/nemesis-pkg/{PKGLIST[i][1]}") == True:
@@ -69,4 +75,10 @@ BUILD_NUM = 23615
 
 if __name__ == "__main__":
     parse_config_file()
-    #sync_packages(REPOLIST)
+    try:
+        if len(argv) > 1 and argv[1] == "update":
+            sync_packages(REPOLIST)
+        elif len(argv) < 1 and argv[1] == "version" or argv[1] == "-v":
+            print(f"nemesis-pkg build {VERSION} {BUILD_NUM}")
+    except IndexError:
+        print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: no operation specified")
