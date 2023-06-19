@@ -214,7 +214,7 @@ def delete_snapshot(id: int):
             else:
                 continue
             
-def undo_history(snapshot_id: int):
+def overwrite_history(snapshot_id: int):
     print(f"{ANSI_CODES[3]}info{ANSI_CODES[4]}: resetting nemesis-pkg history to snapshot id {snapshot_id}")
     chdir("/etc/nemesis-pkg/.history_snapshots")
     file_there = check_output('ls').decode('utf-8').split()
@@ -246,9 +246,9 @@ def undo_history(snapshot_id: int):
                 continue
 
         if id != '':
-            print(f"{ANSI_CODES[1]}sucess{ANSI_CODES[4]}: history undoed to snapshot id {snapshot_id}")
+            print(f"{ANSI_CODES[1]}sucess{ANSI_CODES[4]}: history overwrote to snapshot id {snapshot_id}")
         else:
-            print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: history failed to undo to snapshot id {snapshot_id}")
+            print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: history failed to overwrite with snapshot id {snapshot_id}")
 
                                   
 VERSION = 0.1
@@ -269,8 +269,8 @@ if __name__ == "__main__":
                 file.close()
             elif len(argv) == 4 and argv[2] == "delete":
                 delete_history(argv[3])
-            elif len(argv) > 3 and argv[2] == "undo":
-                undo_history(argv[3])
+            elif len(argv) > 3 and argv[2] == "undo" or argv[2] == "redo":
+                overwrite_history(argv[3])
             elif len(argv) > 4 and argv[2] == "snapshot":
                 try:
                     if argv[4] == "all":
@@ -281,7 +281,7 @@ if __name__ == "__main__":
                     print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: invalid snapshot id")
                     exit(1)
             elif len(argv) == 3 and argv[2] == "help":
-                print("nemesis-pkg history help\n========================\nview: views the history file to see operations run by users\ndelete: this command deletes history from a given date. all keyword clears history\nsnapshot: this command allows to view/undo/redo history snapshots")
+                print("nemesis-pkg history help\n========================\nview: views the history file to see operations run by users\ndelete: this command deletes history from a given date. all keyword clears history\nsnapshot: this command allows to view/delete history snapshots\nundo: undoes history with snapshot id..\nredo: redos history with snapshot id")
         elif len(argv) == 2 and argv[1] == "history":
                 file = open(f"/home/{getlogin()}/.nemesis-pkg_history")
                 print(f"{ANSI_CODES[3]}info{ANSI_CODES[4]}: this is the complete history of operations run by nemesis-pkg")
