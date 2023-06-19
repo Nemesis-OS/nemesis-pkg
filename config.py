@@ -7,7 +7,7 @@ ANSI_CODES = [
 ]
 
 REPOS = [
-    ["https://raw.githubusercontent.com/Nemesis-OS/packages-release/main/release.PKGLIST" , "release.PKGLIST" , "relase"],
+    ["https://raw.githubusercontent.com/Nemesis-OS/packages-release/main/release.PKGLIST" , "release.PKGLIST" , "release"],
     ["https://raw.githubusercontent.com/Nemesis-OS/packages-security/main/security.PKGLIST" , "security.PKGLIST" , "security-updates"]
 ]
 
