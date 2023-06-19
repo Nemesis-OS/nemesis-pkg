@@ -184,27 +184,33 @@ def delete_snapshot(id: int):
             print(f"{ANSI_CODES[3]}info{ANSI_CODES[4]}: user decided to cancel")
     else:
         chdir("/etc/nemesis-pkg/.history_snapshots")
-        for i in check_output('ls').split():
+        files_exist = check_output('ls').decode('utf-8').split()
+        if files_exist == ['meta']:
+            print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: no files will be deleted as meta is the only file")
+            exit(0)
+        else:
+            pass
+        
+        for i in files_exist:
             a = []
             num = ""
             for j in range(0, len(i)):
-                print(i[j])
                 if i[j] == "_":
                     break
                 else:
                     a.append(i[j])
 
-            if len(str(id)) == 1:
-                num == id
+            print(a)
+
+            if len(a) == 1:
+                num = int(a[0])
             else:
                 for k in range(0,len(a)):
                     num = num+str(a[k])
-
-            print(num)
-
+                    
             if int(num) == id:
                 print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: deleting snapshot with id {id}")
-                system(f"rm {i[j]}")
+                system(f"rm {i}")
             else:
                 continue
         
