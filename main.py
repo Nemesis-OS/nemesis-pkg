@@ -145,7 +145,7 @@ def write_hist_snapshot():
     if snapshot_exists == False:
         chdir("/etc/nemesis-pkg/.history_snapshots")
         file_metadata = open("meta" , 'w')
-        metanum = 00
+        metanum = 0
         file_metadata.write(str(metanum))
         file_metadata.close()
     else:
@@ -213,10 +213,46 @@ def delete_snapshot(id: int):
                 system(f"rm {i}")
             else:
                 continue
-        
-    
+            
+def undo_history(snapshot_id: int):
+    print(f"{ANSI_CODES[3]}info{ANSI_CODES[4]}: resetting nemesis-pkg history to snapshot id {snapshot_id}")
+    chdir("/etc/nemesis-pkg/.history_snapshots")
+    file_there = check_output('ls').decode('utf-8').split()
+    if file_there == ['meta']:
+        print(f"{ANSI_CODES[2]}warning{ANSI_CODES[4]}: meta is the only file here so this operation will cancel")
+        exit()
+    else:
+        for i in file_there:
+            a = []
+            id = ''
+            if i == 'meta':
+                continue
+
+            for j in range(0 , len(i)):
+                if i[j] != "_":
+                    a.append(i[j])
+                else:
+                    break
+
+            for k in a:
+                id = str(id+k)
+
+            if int(k) == int(snapshot_id):
+                print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: resetting history to snapshot id {snapshot_id}")
+                copy(i , "/etc/nemesis-pkg/.nemesis-pkg_history")
+                copy(i , f"/home/{getlogin()}/.nemesis-pkg_history")
+                break
+            else:
+                continue
+
+        if id != '':
+            print(f"{ANSI_CODES[1]}sucess{ANSI_CODES[4]}: history undoed to snapshot id {snapshot_id}")
+        else:
+            print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: history failed to undo to snapshot id {snapshot_id}")
+
+                                  
 VERSION = 0.1
-BUILD_NUM = 23618
+BUILD_NUM = 23619
 
 if __name__ == "__main__":
     parse_config_file()
@@ -233,11 +269,17 @@ if __name__ == "__main__":
                 file.close()
             elif len(argv) == 4 and argv[2] == "delete":
                 delete_history(argv[3])
+            elif len(argv) > 3 and argv[2] == "undo":
+                undo_history(argv[3])
             elif len(argv) > 4 and argv[2] == "snapshot":
-                if argv[4] == "all":
-                    delete_snapshot(0)
-                else:
-                    delete_snapshot(int(argv[4]))
+                try:
+                    if argv[4] == "all":
+                        delete_snapshot(0)
+                    elif argv[4]:
+                        delete_snapshot(int(argv[4]))
+                except ValueError:
+                    print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: invalid snapshot id")
+                    exit(1)
             elif len(argv) == 3 and argv[2] == "help":
                 print("nemesis-pkg history help\n========================\nview: views the history file to see operations run by users\ndelete: this command deletes history from a given date. all keyword clears history\nsnapshot: this command allows to view/undo/redo history snapshots")
         elif len(argv) == 2 and argv[1] == "history":
