@@ -106,7 +106,6 @@ def delete_history(date: str):
         print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: you need to be root in order to run this")
         exit(1)
 
-    print(date)
     if date == "all":
         hist_file.seek(0)
         hist_file.truncate()
@@ -146,7 +145,7 @@ def write_hist_snapshot():
     if snapshot_exists == False:
         chdir("/etc/nemesis-pkg/.history_snapshots")
         file_metadata = open("meta" , 'w')
-        metanum = 0
+        metanum = 00
         file_metadata.write(str(metanum))
         file_metadata.close()
     else:
@@ -154,6 +153,7 @@ def write_hist_snapshot():
             file_metadata = open("meta" , 'r+')
             metanum = file_metadata.read()
             metanum = int(metanum)+1
+            metanum = int(str('0'+str(metanum)))
             file_metadata.seek(0)
             file_metadata.write(str(metanum))
             file_metadata.truncate()
@@ -170,12 +170,44 @@ def delete_snapshot(id: int):
     if id == 0:
         if input(f"{ANSI_CODES[2]}warning{ANSI_CODES[4]}: this is an irreversible operation and all the saved snapshots will be lost.. do you want to continue it[{ANSI_CODES[1]}y{ANSI_CODES[4]}/{ANSI_CODES[0]}N{ANSI_CODES[4]}] ") == "y":
             chdir("/etc/nemesis-pkg/.history_snapshots")
+            # reset meta
+            meta = open('meta' , 'r+')
+            meta.seek(0)
+            meta.write(str(0))
+            meta.truncate()
+            meta.close()
             if system("rm -rf *.bak") != 0:
                 print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: snapshot was not deleted due to some errors")
             else:
                 print(f"{ANSI_CODES[1]}sucess{ANSI_CODES[4]}: snapshot deleted sucessfully")
         else:
             print(f"{ANSI_CODES[3]}info{ANSI_CODES[4]}: user decided to cancel")
+    else:
+        chdir("/etc/nemesis-pkg/.history_snapshots")
+        for i in check_output('ls').split():
+            a = []
+            num = ""
+            for j in range(0, len(i)):
+                print(i[j])
+                if i[j] == "_":
+                    break
+                else:
+                    a.append(i[j])
+
+            if len(str(id)) == 1:
+                num == id
+            else:
+                for k in range(0,len(a)):
+                    num = num+str(a[k])
+
+            print(num)
+
+            if int(num) == id:
+                print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: deleting snapshot with id {id}")
+                system(f"rm {i[j]}")
+            else:
+                continue
+        
     
 VERSION = 0.1
 BUILD_NUM = 23618
