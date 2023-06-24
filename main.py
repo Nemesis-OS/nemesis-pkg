@@ -2,15 +2,9 @@
 from os import mkdir, chdir, getlogin, system
 from os.path import isdir, isfile
 from sys import argv, exit, path
-from subprocess import check_output
+from subprocess import check_output, CalledProcessError
 from shutil import copy
 from time import strftime
-try:
-    from requests import get
-    from requests.exceptions import MissingSchema, ConnectionError
-except ImportError:
-    print("error: requests not found..")
-    exit(1)
 
 #disable_check_important_files = True
 ANSI_CODES = []
@@ -54,12 +48,12 @@ def sync_packages(PKGLIST: list[list[str]]):
             fexists = True
             plist = open(f"/etc/nemesis-pkg/{PKGLIST[i][1]}" , 'r+')
             list_contents = plist.read()
+            pass
         else:
             print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: {ANSI_CODES[2]}{PKGLIST[i][1]}{ANSI_CODES[4]} not found so creating it..")
-            plist = open(f"/etc/nemesis-pkg/{PKGLIST[i][1]}" , 'w')
-
-        downloaded_version = get(PKGLIST[i][0]).content.decode("utf-8")
-
+            plist = open(f"/etc/nemesis-pkg/{PKGLIST[i][1]}" , 'w')    
+        downloaded_version = check_output(['curl' , PKGLIST[i][0]]).decode("utf-8")
+        
         if fexists == False:
             plist.write(str(downloaded_version))
             plist.close()
@@ -69,7 +63,7 @@ def sync_packages(PKGLIST: list[list[str]]):
             plist.write(str(downloaded_version))
             plist.truncate()
             plist.close()
-            print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: {ANSI_CODES[2]}{PKGLIST[i][1]}{ANSI_CODES[4]} up to date")
+            print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: {ANSI_CODES[2]}{PKGLIST[i][1]}{ANSI_CODES[4]} updated..")
         else:
             print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: {ANSI_CODES[2]}{PKGLIST[i][1]}{ANSI_CODES[4]} was up to date")
 
@@ -257,7 +251,7 @@ BUILD_NUM = 23619
 if __name__ == "__main__":
     parse_config_file()
     try:
-        if len(argv) >= 2 and argv[1] == "update":
+        if len(argv) >= 2 and argv[1] == "sync":
             sync_packages(REPOLIST)
         elif len(argv) >= 2 and argv[1] == "version" or argv[1] == "-v":
             print(f"nemesis-pkg build {VERSION} {BUILD_NUM}")
