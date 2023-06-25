@@ -35,11 +35,11 @@ def parse_config_file():
     REPOLIST = config.REPOS
 
 def sync_packages(PKGLIST: list[list[str]]):
-    #if check_output("whoami") != b'root\n':
-        #print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: root user can only run update")
-        #exit(1)
-    #else:
-        #pass
+    if check_output("whoami") != b'root\n':
+        print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: root user can only run update")
+        exit(1)
+    else:
+        pass
     
     for i in range(0 , len(PKGLIST)):                
         fexists = False
