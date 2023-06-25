@@ -4,9 +4,14 @@ A fast and simple package manager for Nemesis inspired from `kiss` and `pacman`.
 # usage:-
 `nemsis-pkg` has various flags that performs operations and some operations have their args.
 
-- `update` flag sync database
+- [x] `sync` flag to sync the package database
+- [ ] `log` flag to see the total operations performed by `nemesis-pkg`
+- [ ] `query`
+
+### depreciations:
+- [ ] `history` its pretty much like logs and logs are way simpler and minimal
 
 # huge thanks:-
-- [`kiss`](https://github.com/kisslinux/kiss)
-- [`pacman`](gitlab.archlinux.org/pacman/pacman)
-- [`nala`](https://github.com/volitank/nala) - for the history/snapshot feature
+- [`kiss`](https://github.com/kisslinux/kiss) - for its simplicity/user friendliness
+- [`pacman`](gitlab.archlinux.org/pacman/pacman) - for its search implementation
+- [`nala`](https://github.com/volitank/nala) - for the log idea
