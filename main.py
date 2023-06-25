@@ -35,11 +35,11 @@ def parse_config_file():
     REPOLIST = config.REPOS
 
 def sync_packages(PKGLIST: list[list[str]]):
-    if check_output("whoami") != b'root\n':
-        print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: root user can only run update")
-        exit(1)
-    else:
-        pass
+    #if check_output("whoami") != b'root\n':
+        #print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: root user can only run update")
+        #exit(1)
+    #else:
+        #pass
     
     for i in range(0 , len(PKGLIST)):                
         fexists = False
@@ -244,6 +244,26 @@ def overwrite_history(snapshot_id: int):
         else:
             print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: history failed to overwrite with snapshot id {snapshot_id}")
 
+def view_history(id: int):
+    if id == -1:
+        num = 0
+        print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: viewing all the snapshots of history.")
+        chdir("/etc/nemesis-pkg/.history_snapshots")
+        flist = check_output('ls').decode('utf-8').split()
+        for i in flist:
+            if i == 'meta':
+                break
+            else:
+                print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: viewing snapshot file with id {num}")
+                num = num+1
+                sfile = open(i , 'r')
+                print(sfile.read())
+                sfile.close()
+                continue
+        print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: all the history snapshots have been shown")
+    else:
+        print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: viewing snapshot id {id}")
+        
                                   
 VERSION = 0.1
 BUILD_NUM = 23619
@@ -266,14 +286,18 @@ if __name__ == "__main__":
             elif len(argv) > 3 and argv[2] == "undo" or argv[2] == "redo":
                 overwrite_history(argv[3])
             elif len(argv) > 4 and argv[2] == "snapshot":
-                try:
+                if argv[3] == "delete":
+                    try:
+                        if argv[4] == "all":
+                            delete_snapshot(0)
+                        else:
+                            delete_snapshot(int(argv[4]))
+                    except ValueError:
+                        print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: invalid snapshot id")
+                        exit(1)
+                elif argv[3] == "view":
                     if argv[4] == "all":
-                        delete_snapshot(0)
-                    elif argv[4]:
-                        delete_snapshot(int(argv[4]))
-                except ValueError:
-                    print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: invalid snapshot id")
-                    exit(1)
+                        view_history(-1)
             elif len(argv) == 3 and argv[2] == "help":
                 print("nemesis-pkg history help\n========================\nview: views the history file to see operations run by users\ndelete: this command deletes history from a given date. all keyword clears history\nsnapshot: this command allows to view/delete history snapshots\nundo: undoes history with snapshot id..\nredo: redos history with snapshot id")
         elif len(argv) == 2 and argv[1] == "history":
