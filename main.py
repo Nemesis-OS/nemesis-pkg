@@ -101,9 +101,25 @@ def write_log(text: str):
 def view_log():
     print(f"{ANSI_CODES[3]}info{ANSI_CODES[4]}: viewing the nemesis-pkg log file")
     chdir("/etc/nemesis-pkg")
-    logfile = open("/etc/nemesis-pkg/nemesis-pkg.log" , 'r')
-    print(logfile.read())
-    logfile.close()
+    try:
+        logfile = open("/etc/nemesis-pkg/nemesis-pkg.log" , 'r')
+        print(logfile.read())
+        logfile.close()
+    except FileNotFoundError:
+        print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: file not found")
+
+def remove_log():
+    yn = str(input(f"{ANSI_CODES[2]}warning{ANSI_CODES[4]}: removing the logfile will delete the list of all the operations you executed...[{ANSI_CODES[1]}y{ANSI_CODES[4]}/{ANSI_CODES[0]}N{ANSI_CODES[4]}] "))
+    if yn == "y" or yn == "Y":
+        print(f"{ANSI_CODES[3]}info{ANSI_CODES[4]}: removing logfile")
+        chdir("/etc/nemesis-pkg")
+        if system("rm nemesis-pkg.log") == 0:
+            print(f"{ANSI_CODES[1]}sucess{ANSI_CODES[4]}: the logfile was removed succesfully")
+        else:
+            print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: something went wrong that is why the logfile was not removed")
+            exit(1)
+    else:
+        print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: the logfile was not deleted")
 
 VERSION = 0.1
 BUILD_NUM = 23625
@@ -115,6 +131,15 @@ if __name__ == "__main__":
             sync_packages(REPOLIST)
         elif len(argv) >= 2 and argv[1] == "version" or argv[1] == "-v":
             print(f"nemesis-pkg build {VERSION} {BUILD_NUM}")
+        elif len(argv) >= 2 and argv[1] == "log":
+            if len(argv) == 2:
+                print("log: this allows you to view/delete logs\n========================================\nview: this allows you to view logfile\ndelete: this allows you to delete logfile")
+            elif len(argv) == 3 and argv[2] == "view" or argv[2] == "v":
+                view_log()
+            elif len(argv) == 3 and argv[2] == "delete" or argv[2] == "d":
+                remove_log()
+            else:
+                print("log: this allows you to view/delete logs\n========================================\nview: this allows you to view logfile\ndelete: this allows you to delete logfile")
         else:
             print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: invalid operation")
     except IndexError:
