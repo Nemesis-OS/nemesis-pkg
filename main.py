@@ -98,6 +98,13 @@ def write_log(text: str):
         logfile.truncate()
         logfile.close()
 
+def view_log():
+    print(f"{ANSI_CODES[3]}info{ANSI_CODES[4]}: viewing the nemesis-pkg log file")
+    chdir("/etc/nemesis-pkg")
+    logfile = open("/etc/nemesis-pkg/nemesis-pkg.log" , 'r')
+    print(logfile.read())
+    logfile.close()
+
 VERSION = 0.1
 BUILD_NUM = 23625
 
