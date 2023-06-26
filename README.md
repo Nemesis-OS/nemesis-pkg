@@ -5,7 +5,7 @@ A fast and simple package manager for Nemesis inspired from `kiss` and `pacman`.
 `nemsis-pkg` has various flags that performs operations and some operations have their args.
 
 - [x] `sync` flag to sync the package database
-- [ ] `log` flag to see the total operations performed by `nemesis-pkg`
+- [x] `log` flag to see the total operations performed by `nemesis-pkg`
 - [ ] `query`
 
 ### depreciations:
