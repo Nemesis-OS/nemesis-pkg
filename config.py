@@ -12,3 +12,5 @@ REPOS = [
 ]
 
 check_nessary_files = True
+
+preserve_build_files = True
