@@ -1,12 +1,14 @@
 #!/usr/bin/python3
-from os import mkdir, chdir, getlogin, system
+from os import mkdir, chdir, system, environ
 from os.path import isdir, isfile
 from sys import argv, exit, path
 from subprocess import check_output, CalledProcessError
 from shutil import copy
 from time import strftime
+from tomllib import loads
 
-#disable_check_important_files = True
+disable_check_important_files = False
+preserve_build_files = True
 ANSI_CODES = []
 REPOLIST = []
 
@@ -33,6 +35,12 @@ def parse_config_file():
         disable_check_important_files = True
 
     REPOLIST = config.REPOS
+
+    if config.preserve_build_files == True:
+        preserve_build_files == True
+    else:
+        preserve_build_files == False
+
 
 def sync_packages(PKGLIST: list[list[str]]):
     if check_output("whoami") != b'root\n':
@@ -126,7 +134,25 @@ def list_packages():
         file = open(f"/etc/nemesis-pkg/{REPOLIST[i][1]}" , 'r')
         for h in file.read().splitlines():
             print(str(f"{ANSI_CODES[2]}{REPOLIST[i][2]}{ANSI_CODES[4]}/{h.split()[0]} {ANSI_CODES[1]}{h.split()[1]}{ANSI_CODES[4]}"))
-         
+
+def install_packages(pname: str):
+    print(f"{ANSI_CODES[3]}build{ANSI_CODES[4]}: downloading {pname}")
+    preserve_build_files = False
+    if preserve_build_files == False:
+        mkdir(f"/tmp/nemesis-pkg-build/")
+        mkdir(f"/tmp/nemesis-pkg-build/{pname}")
+        chdir(f"/tmp/nemesis-pkg-build/{pname}")
+    
+    print(f"{ANSI_CODES[3]}info{ANSI_CODES[4]}: downloading build.toml")
+    build_contents = check_output(['curl' , f'https://raw.githubusercontent.com/Nemesis-OS/packages-release/main/{pname}/build']).decode('utf-8')
+    print(f"{ANSI_CODES[3]}info{ANSI_CODES[4]}: preparing source for {loads(build_contents)['core']['name']}@{loads(build_contents)['core']['version']}")
+    system('git clone '+loads(build_contents)['core']['source']+f" {loads(build_contents)['core']['name']}")
+    environ['NEMESIS_PKG_BUILD_DIR'] = loads(build_contents)['core']['name']
+    system(loads(build_contents)['build']['command'])
+    if system(loads(build_contents)['build']['command']) == 0:
+        print(f"{ANSI_CODES[1]}sucess{ANSI_CODES[4]}: {loads(build_contents)['core']['name']} installed sucessfully")
+    else:
+        print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: {loads(build_contents)['core']['name']} installed unsucessfully")
 
 VERSION = 0.1
 BUILD_NUM = 23625
@@ -149,6 +175,8 @@ if __name__ == "__main__":
                 print("log: this allows you to view/delete logs\n========================================\nview: this allows you to view logfile\ndelete: this allows you to delete logfile")
         elif len(argv) >= 2 and argv[1] == "list":
             list_packages()
+        elif len(argv) >=2 and argv[1] == "install":
+            install_packages(argv[2])
         else:
             print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: invalid operation")
 
