@@ -9,7 +9,7 @@ A fast and simple package manager for Nemesis inspired from `kiss` and `pacman`.
 - [ ] `query`
 
 ### depreciations:
-- [ ] `history` its pretty much like logs and logs are way simpler and minimal
+- [x] `history` its pretty much like logs and logs are way simpler and minimal[DEPRECIATED as of build 23625]
 
 # huge thanks:-
 - [`kiss`](https://github.com/kisslinux/kiss) - for its simplicity/user friendliness
