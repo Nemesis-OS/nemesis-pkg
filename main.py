@@ -58,17 +58,46 @@ def sync_packages(PKGLIST: list[list[str]]):
             plist.write(str(downloaded_version))
             plist.close()
             print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: made {ANSI_CODES[2]}{PKGLIST[i][1]}{ANSI_CODES[4]}")
+            ctime = strftime("%D %H:%M:%S")
+            write_log(f"{ctime} UPDATE {PKGLIST[i][1]}")
         elif list_contents != str(downloaded_version):
             plist.seek(0)
             plist.write(str(downloaded_version))
             plist.truncate()
             plist.close()
             print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: {ANSI_CODES[2]}{PKGLIST[i][1]}{ANSI_CODES[4]} updated..")
+            ctime = strftime("%D %H:%M:%S")
+            write_log(f"{ctime} UPDATE {PKGLIST[i][1]}")
         else:
             print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: {ANSI_CODES[2]}{PKGLIST[i][1]}{ANSI_CODES[4]} was up to date")
+            ctime = strftime("%D %H:%M:%S")
+            write_log(f"{ctime} UPDATE {PKGLIST[i][1]}")
 
-        ctime = strftime("%D %H:%M:%S")
-                                          
+def write_log(text: str):
+    print(f"{ANSI_CODES[3]}info{ANSI_CODES[4]}: checking if log file found")
+    if isfile("/etc/nemesis-pkg/nemesis-pkg.log") == True:
+        log_not_there = False
+        pass
+    else:
+        print(f"{ANSI_CODES[2]}warning{ANSI_CODES[4]}: the log file does not exists so creating it..")
+        log_not_there = True
+
+    if log_not_there == True:
+        chdir("/etc/nemesis-pkg")
+        logfile = open("/etc/nemesis-pkg/nemesis-pkg.log", 'w')
+        logfile.write(f"{text}\n")
+        logfile.close()
+    else:
+        chdir("/etc/nemesis-pkg")
+        logfile = open("/etc/nemesis-pkg/nemesis-pkg.log", 'r+')
+        logfile.seek(0)
+        if logfile.read().splitlines == []:
+            logfile.write(f"{text}\n")
+        else:
+            logfile.write(f"{text}\n")
+        logfile.truncate()
+        logfile.close()
+
 VERSION = 0.1
 BUILD_NUM = 23625
 
