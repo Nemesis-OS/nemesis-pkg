@@ -121,6 +121,13 @@ def remove_log():
     else:
         print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: the logfile was not deleted")
 
+def list_packages():
+    for i in range(0, len(REPOLIST)):
+        file = open(f"/etc/nemesis-pkg/{REPOLIST[i][1]}" , 'r')
+        for h in file.read().splitlines():
+            print(str(f"{ANSI_CODES[2]}{REPOLIST[i][2]}{ANSI_CODES[4]}/{h.split()[0]} {ANSI_CODES[1]}{h.split()[1]}{ANSI_CODES[4]}"))
+         
+
 VERSION = 0.1
 BUILD_NUM = 23625
 
@@ -140,8 +147,11 @@ if __name__ == "__main__":
                 remove_log()
             else:
                 print("log: this allows you to view/delete logs\n========================================\nview: this allows you to view logfile\ndelete: this allows you to delete logfile")
+        elif len(argv) >= 2 and argv[1] == "list":
+            list_packages()
         else:
             print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: invalid operation")
+
     except IndexError:
         print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: no operation specified")
     except KeyboardInterrupt:
