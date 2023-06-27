@@ -82,12 +82,10 @@ def sync_packages(PKGLIST: list[list[str]]):
             write_log(f"{ctime} UPDATE {PKGLIST[i][1]}")
 
 def write_log(text: str):
-    print(f"{ANSI_CODES[3]}info{ANSI_CODES[4]}: checking if log file found")
     if isfile("/etc/nemesis-pkg/nemesis-pkg.log") == True:
         log_not_there = False
         pass
     else:
-        print(f"{ANSI_CODES[2]}warning{ANSI_CODES[4]}: the log file does not exists so creating it..")
         log_not_there = True
 
     if log_not_there == True:
@@ -157,9 +155,17 @@ def install_packages(pname: str):
     build_contents = check_output(['curl' , f'https://raw.githubusercontent.com/Nemesis-OS/packages-release/main/{pname}/build']).decode('utf-8')
     try:
         print(f"{ANSI_CODES[3]}info{ANSI_CODES[4]}: preparing source for {loads(build_contents)['core']['name']}@{loads(build_contents)['core']['version']}")
-        system('git clone '+loads(build_contents)['core']['source']+f" {loads(build_contents)['core']['name']}")
-        environ['NEMESIS_PKG_BUILD_DIR'] = loads(build_contents)['core']['name']
-        system(loads(build_contents)['build']['command'])
+        system('git clone '+loads(build_contents)['core']['source']+f" {loads(build_contents)['core']['name']}")    
+        if loads(build_contents)['core']['depends'] == []:
+            print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: {pname} has no dependencies so installing it")
+            pass
+        else:
+            for i in loads(build_contents)['core']['depends']:
+                print(f"{ANSI_CODES[2]}info{ANSI_CODES[4]}: installing dependency {i} for {pname}")
+                install_packages(i)
+                
+        environ['NEMESIS_PKG_BUILD_DIR'] = f"/tmp/nemesis-pkg-build/{loads(build_contents)['core']['name']}/{loads(build_contents)['core']['name']}"
+        print(f"{ANSI_CODES[2]}info{ANSI_CODES[4]}: installing {pname}")
         if system(loads(build_contents)['build']['command']) == 0:
             print(f"{ANSI_CODES[1]}sucess{ANSI_CODES[4]}: {loads(build_contents)['core']['name']} installed sucessfully")
         else:
