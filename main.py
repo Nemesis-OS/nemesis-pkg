@@ -152,10 +152,15 @@ def install_packages(pname: str):
         chdir(f"/tmp/nemesis-pkg-build/{pname}")
     
     print(f"{ANSI_CODES[3]}info{ANSI_CODES[4]}: downloading build.toml")
-    build_contents = check_output(['curl' , f'https://raw.githubusercontent.com/Nemesis-OS/packages-release/main/{pname}/build']).decode('utf-8')
+    build_contents = check_output(['curl' , f'https://raw.githubusercontent.com/Nemesis-OS/packages-security/main/{pname}/build']).decode('utf-8')
+    if build_contents == "404: Not Found":
+        print(f"note: downloading build.toml from release repository")
+        build_contents = check_output(['curl' , f'https://raw.githubusercontent.com/Nemesis-OS/packages-release/main/{pname}/build']).decode('utf-8')
+    else:
+        pass
     try:
         print(f"{ANSI_CODES[3]}info{ANSI_CODES[4]}: preparing source for {loads(build_contents)['core']['name']}@{loads(build_contents)['core']['version']}")
-        system('git clone '+loads(build_contents)['core']['source']+f" {loads(build_contents)['core']['name']}")    
+        system('git clone '+loads(build_contents)['core']['source']+f" {loads(build_contents)['core']['name']}")
         if loads(build_contents)['core']['depends'] == []:
             print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: {pname} has no dependencies so installing it")
             pass
@@ -170,8 +175,8 @@ def install_packages(pname: str):
             print(f"{ANSI_CODES[1]}sucess{ANSI_CODES[4]}: {loads(build_contents)['core']['name']} installed sucessfully")
         else:
             print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: {loads(build_contents)['core']['name']} installed unsucessfully")
-    except TOMLDecodeError:
-        print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: {ANSI_CODES[2]}{pname}{ANSI_CODES[4]} not in repositories")
+    except TOMLDecodeError
+        print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: please open a bug report to the NemesisOS Developers regarding this issue.")
 
 VERSION = 0.1
 BUILD_NUM = 23626
