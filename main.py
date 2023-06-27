@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-from os import mkdir, chdir, system, environ
+from os import mkdir, chdir, system, environ, rmdir
 from os.path import isdir, isfile
 from sys import argv, exit, path
 from subprocess import check_output, CalledProcessError
@@ -139,8 +139,18 @@ def install_packages(pname: str):
     print(f"{ANSI_CODES[3]}build{ANSI_CODES[4]}: downloading {pname}")
     preserve_build_files = False
     if preserve_build_files == False:
-        mkdir(f"/tmp/nemesis-pkg-build/")
-        mkdir(f"/tmp/nemesis-pkg-build/{pname}")
+        try:
+            mkdir(f"/tmp/nemesis-pkg-build/")
+        except FileExistsError:
+            pass 
+
+        try:
+            mkdir(f"/tmp/nemesis-pkg-build/{pname}")
+        except FileExistsError:
+            rmdir(f"/tmp/nemesis-pkg-build/{pname}")
+            mkdir(f"/tmp/nemesis-pkg-build/{pname}")
+            pass 
+
         chdir(f"/tmp/nemesis-pkg-build/{pname}")
     
     print(f"{ANSI_CODES[3]}info{ANSI_CODES[4]}: downloading build.toml")
