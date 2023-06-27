@@ -5,7 +5,7 @@ from sys import argv, exit, path
 from subprocess import check_output, CalledProcessError
 from shutil import copy
 from time import strftime
-from tomllib import loads
+from tomllib import loads, TOMLDecodeError
 
 disable_check_important_files = False
 preserve_build_files = True
@@ -145,17 +145,20 @@ def install_packages(pname: str):
     
     print(f"{ANSI_CODES[3]}info{ANSI_CODES[4]}: downloading build.toml")
     build_contents = check_output(['curl' , f'https://raw.githubusercontent.com/Nemesis-OS/packages-release/main/{pname}/build']).decode('utf-8')
-    print(f"{ANSI_CODES[3]}info{ANSI_CODES[4]}: preparing source for {loads(build_contents)['core']['name']}@{loads(build_contents)['core']['version']}")
-    system('git clone '+loads(build_contents)['core']['source']+f" {loads(build_contents)['core']['name']}")
-    environ['NEMESIS_PKG_BUILD_DIR'] = loads(build_contents)['core']['name']
-    system(loads(build_contents)['build']['command'])
-    if system(loads(build_contents)['build']['command']) == 0:
-        print(f"{ANSI_CODES[1]}sucess{ANSI_CODES[4]}: {loads(build_contents)['core']['name']} installed sucessfully")
-    else:
-        print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: {loads(build_contents)['core']['name']} installed unsucessfully")
+    try:
+        print(f"{ANSI_CODES[3]}info{ANSI_CODES[4]}: preparing source for {loads(build_contents)['core']['name']}@{loads(build_contents)['core']['version']}")
+        system('git clone '+loads(build_contents)['core']['source']+f" {loads(build_contents)['core']['name']}")
+        environ['NEMESIS_PKG_BUILD_DIR'] = loads(build_contents)['core']['name']
+        system(loads(build_contents)['build']['command'])
+        if system(loads(build_contents)['build']['command']) == 0:
+            print(f"{ANSI_CODES[1]}sucess{ANSI_CODES[4]}: {loads(build_contents)['core']['name']} installed sucessfully")
+        else:
+            print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: {loads(build_contents)['core']['name']} installed unsucessfully")
+    except TOMLDecodeError:
+        print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: {ANSI_CODES[2]}{pname}{ANSI_CODES[4]} not in repositories")
 
 VERSION = 0.1
-BUILD_NUM = 23625
+BUILD_NUM = 23626
 
 if __name__ == "__main__":
     parse_config_file()
