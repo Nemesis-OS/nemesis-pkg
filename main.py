@@ -132,7 +132,11 @@ def list_packages():
         file = open(f"/etc/nemesis-pkg/{REPOLIST[i][1]}" , 'r')
         for h in file.read().splitlines():
             print(str(f"{ANSI_CODES[2]}{REPOLIST[i][2]}{ANSI_CODES[4]}/{h.split()[0]} {ANSI_CODES[1]}{h.split()[1]}{ANSI_CODES[4]}"))
-
+            
+def install_multiple_packages(pkglist: list[str]):
+    for i in pkglist:
+        install_packages(i)
+    
 def install_packages(pname: str):
     print(f"{ANSI_CODES[3]}build{ANSI_CODES[4]}: downloading {pname}")
     preserve_build_files = False
@@ -145,7 +149,10 @@ def install_packages(pname: str):
         try:
             mkdir(f"/tmp/nemesis-pkg-build/{pname}")
         except FileExistsError:
-            rmdir(f"/tmp/nemesis-pkg-build/{pname}")
+            try:
+                rmdir(f"/tmp/nemesis-pkg-build/{pname}")
+            except OSError:
+                system(f"rm -rf /tmp/nemesis-pkg-build/{pname}")
             mkdir(f"/tmp/nemesis-pkg-build/{pname}")
             pass 
 
@@ -172,14 +179,20 @@ def install_packages(pname: str):
         environ['NEMESIS_PKG_BUILD_DIR'] = f"/tmp/nemesis-pkg-build/{loads(build_contents)['core']['name']}/{loads(build_contents)['core']['name']}"
         print(f"{ANSI_CODES[2]}info{ANSI_CODES[4]}: installing {pname}")
         if system(loads(build_contents)['build']['command']) == 0:
+            ctime = strftime("%D %H:%M:%S")
+            write_log(f"{ctime} SUCESS {pname} installed")
             print(f"{ANSI_CODES[1]}sucess{ANSI_CODES[4]}: {loads(build_contents)['core']['name']} installed sucessfully")
         else:
+            ctime = strftime("%D %H:%M:%S")
+            write_log(f"{ctime} ERROR {pname} failed to install")
             print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: {loads(build_contents)['core']['name']} installed unsucessfully")
-    except TOMLDecodeError
-        print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: please open a bug report to the NemesisOS Developers regarding this issue.")
+    except (TOMLDecodeError, KeyError):
+        ctime = strftime("%D %H:%M:%S")
+        write_log(f"{ctime} ERROR {pname} failed to install")
+        print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: either this package is missing or the build file is corrupt... please open a bug report to the NemesisOS Developers regarding this issue.")
 
 VERSION = 0.1
-BUILD_NUM = 23626
+BUILD_NUM = 23627
 
 if __name__ == "__main__":
     parse_config_file()
@@ -200,7 +213,12 @@ if __name__ == "__main__":
         elif len(argv) >= 2 and argv[1] == "list":
             list_packages()
         elif len(argv) >=2 and argv[1] == "install":
-            install_packages(argv[2])
+            if len(argv) == 3:
+                install_package(argv[2])
+            else:
+                a = []
+                for i in range(2, len(argv)):a.append(argv[i])
+                install_multiple_packages(a)
         else:
             print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: invalid operation")
 
