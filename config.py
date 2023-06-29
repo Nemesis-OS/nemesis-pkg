@@ -14,3 +14,5 @@ REPOS = [
 check_nessary_files = True
 
 preserve_build_files = True
+
+cpu_flags = [] # insert cpu flags here..
