@@ -7,8 +7,8 @@ ANSI_CODES = [
 ]
 
 REPOS = [
-    ["https://raw.githubusercontent.com/Nemesis-OS/packages-release/main/release.PKGLIST" , "release.PKGLIST" , "release"],
-    ["https://raw.githubusercontent.com/Nemesis-OS/packages-security/main/security.PKGLIST" , "security.PKGLIST" , "security-updates"]
+    ["https://raw.githubusercontent.com/Nemesis-OS/packages-release/main/release.PKGLIST" , "release.PKGLIST" , "release" , "https://raw.githubusercontent.com/Nemesis-OS/packages-release/main/"],
+    ["https://raw.githubusercontent.com/Nemesis-OS/packages-security/main/security.PKGLIST" , "security.PKGLIST" , "security-updates" , "https://raw.githubusercontent.com/Nemesis-OS/packages-security/main/"]
 ]
 
 check_nessary_files = True
