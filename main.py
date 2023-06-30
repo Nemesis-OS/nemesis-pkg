@@ -6,14 +6,17 @@ from subprocess import check_output, CalledProcessError
 from shutil import copy
 from time import strftime
 from tomllib import loads, TOMLDecodeError
+from urllib.request import urlopen
+from urllib.error import URLError
 
 disable_check_important_files = False
 preserve_build_files = True
 ANSI_CODES = []
 REPOLIST = []
+cpu_flags = []
 
 def parse_config_file():
-    global disable_check_important_files, ANSI_CODES, REPOLIST
+    global disable_check_important_files, ANSI_CODES, REPOLIST, cpu_flags
     if isfile("/etc/nemesis-pkg/config.py") == True:
         pass
     else:
@@ -41,7 +44,11 @@ def parse_config_file():
     else:
         preserve_build_files == False
 
-
+    if config.cpu_flags == []:
+        print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: cpu flags is not defined")
+    else:
+        config.cpu_flags = cpu_flags
+    
 def sync_packages(PKGLIST: list[list[str]]):
     if check_output("whoami") != b'root\n':
         print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: root user can only run update")
@@ -138,7 +145,7 @@ def install_multiple_packages(pkglist: list[str]):
         install_packages(i)
     
 def install_packages(pname: str):
-    print(f"{ANSI_CODES[3]}build{ANSI_CODES[4]}: downloading {pname}")
+    print(f"{ANSI_CODES[3]}build{ANSI_CODES[4]}: checking if {pname} is in repositories..")
     preserve_build_files = False
     if preserve_build_files == False:
         try:
@@ -157,15 +164,39 @@ def install_packages(pname: str):
             pass 
 
         chdir(f"/tmp/nemesis-pkg-build/{pname}")
-    
-    print(f"{ANSI_CODES[3]}info{ANSI_CODES[4]}: downloading build.toml")
-    build_contents = check_output(['curl' , f'https://raw.githubusercontent.com/Nemesis-OS/packages-security/main/{pname}/build']).decode('utf-8')
-    if build_contents == "404: Not Found":
-        print(f"note: downloading build.toml from release repository")
-        build_contents = check_output(['curl' , f'https://raw.githubusercontent.com/Nemesis-OS/packages-release/main/{pname}/build']).decode('utf-8')
+
+    curl = ""
+
+    for i in range(0, len(REPOLIST)):
+        try:
+            urlopen(REPOLIST[i][3]+f"{pname}/build")
+        except URLError:
+            continue
+        
+        curl = REPOLIST[i][3]+f"{pname}/build"
+        
+    if curl == "":
+        print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: {ANSI_CODES[2]}{pname}{ANSI_CODES[4]} is not in any repositories")
+        exit(1)
     else:
         pass
+
+    print(f"{ANSI_CODES[3]}info{ANSI_CODES[4]}: downloading build.toml")
+    build_contents = check_output(['curl' , curl]).decode('utf-8')
+
     try:
+
+        if loads(build_contents)['core']['cpu_flags'] == []:
+            pass
+        else:
+        print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: checking if your cpu has neccesary instruction sets")            
+            for i in loads(build_contents)['core']['cpu_flags']:
+                if i in cpu_flags:
+                    continue
+                else:
+                    print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: {i} not in cpu flags")
+                    exit(1)
+					
         print(f"{ANSI_CODES[3]}info{ANSI_CODES[4]}: preparing source for {loads(build_contents)['core']['name']}@{loads(build_contents)['core']['version']}")
         system('git clone '+loads(build_contents)['core']['source']+f" {loads(build_contents)['core']['name']}")
         if loads(build_contents)['core']['depends'] == []:
@@ -180,7 +211,7 @@ def install_packages(pname: str):
         print(f"{ANSI_CODES[2]}info{ANSI_CODES[4]}: installing {pname}")
         if system(loads(build_contents)['build']['command']) == 0:
             ctime = strftime("%D %H:%M:%S")
-            write_log(f"{ctime} SUCESS {pname} installed")
+            write_log(f"{ctime} PASS {pname} installed sucesfully")
             print(f"{ANSI_CODES[1]}sucess{ANSI_CODES[4]}: {loads(build_contents)['core']['name']} installed sucessfully")
         else:
             ctime = strftime("%D %H:%M:%S")
@@ -214,7 +245,7 @@ if __name__ == "__main__":
             list_packages()
         elif len(argv) >=2 and argv[1] == "install":
             if len(argv) == 3:
-                install_package(argv[2])
+                install_packages(argv[2])
             else:
                 a = []
                 for i in range(2, len(argv)):a.append(argv[i])
