@@ -216,12 +216,12 @@ def install_packages(pname: str):
             if isfile("/etc/nemesis-pkg/installed-packages.PKGLIST") == True:
                 installed_pkgs = open("/etc/nemesis-pkg/installed-packages.PKGLIST" , 'a+')
                 installed_pkgs.seek(0)
-                installed_pkgs.write(str([loads(build_contents)['core']['name'] , loads(build_contents)['core']['version'] , loads(build_contents)['core']['depends'], loads(build_contents)['build']['files']])+"\n")
+                installed_pkgs.write(loads(build_contents)['core']['name']+" "+loads(build_contents)['core']['version']+" "+str(loads(build_contents)['core']['depends'])+" "+str(loads(build_contents)['build']['files'])+"\n")
                 installed_pkgs.truncate()
                 installed_pkgs.close()
             else:
                 installed_pkgs = open("/etc/nemesis-pkg/installed-packages.PKGLIST" , 'w')
-                installed_pkgs.write((str([loads(build_contents)['core']['name'] , loads(build_contents)['core']['version'] , loads(build_contents)['core']['depends'], loads(build_contents)['build']['files']])+"\n"))
+		installed_pkgs.write(loads(build_contents)['core']['name']+" "+loads(build_contents)['core']['version']+" "+str(loads(build_contents)['core']['depends'])+" "+str(loads(build_contents)['build']['files'])+"\n")
                 installed_pkgs.close()
         else:
             ctime = strftime("%D %H:%M:%S")
@@ -232,6 +232,17 @@ def install_packages(pname: str):
         ctime = strftime("%D %H:%M:%S")
         write_log(f"{ctime} ERROR {pname} failed to install")
         print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: either this package is missing or the build file is corrupt... please open a bug report to the NemesisOS Developers regarding this issue.")
+
+def list_installed():
+    print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: this is the list of all installed packages")
+    try:
+        ipkglist_open = open("/etc/nemesis-pkg/installed-packages.PKGLIST" , 'r')
+        for i in ipkglist_open.read().splitlines():
+            print(i.split()[0], f"{ANSI_CODES[1]}{i.split()[1]}{ANSI_CODES[4]}")
+            
+        ipkglist_open.close()
+    except URLError:
+        print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: something went wrong")
 
 VERSION = 0.1
 BUILD_NUM = 23701
@@ -253,7 +264,10 @@ if __name__ == "__main__":
             else:
                 print("log: this allows you to view/delete logs\n========================================\nview: this allows you to view logfile\ndelete: this allows you to delete logfile")
         elif len(argv) >= 2 and argv[1] == "list":
-            list_packages()
+            if len(argv) == 3 and argv[2] == "installed":
+                list_installed()
+            else:
+                list_packages()
         elif len(argv) >=2 and argv[1] == "install":
             if len(argv) == 3:
                 install_packages(argv[2])
