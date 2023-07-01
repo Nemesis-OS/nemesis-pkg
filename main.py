@@ -189,7 +189,7 @@ def install_packages(pname: str):
         if loads(build_contents)['core']['cpu_flags'] == []:
             pass
         else:
-        print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: checking if your cpu has neccesary instruction sets")            
+            print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: checking if your cpu has neccesary instruction sets")            
             for i in loads(build_contents)['core']['cpu_flags']:
                 if i in cpu_flags:
                     continue
@@ -213,17 +213,28 @@ def install_packages(pname: str):
             ctime = strftime("%D %H:%M:%S")
             write_log(f"{ctime} PASS {pname} installed sucesfully")
             print(f"{ANSI_CODES[1]}sucess{ANSI_CODES[4]}: {loads(build_contents)['core']['name']} installed sucessfully")
+            if isfile("/etc/nemesis-pkg/installed-packages.PKGLIST") == True:
+                installed_pkgs = open("/etc/nemesis-pkg/installed-packages.PKGLIST" , 'a+')
+                installed_pkgs.seek(0)
+                installed_pkgs.write(str([loads(build_contents)['core']['name'] , loads(build_contents)['core']['version'] , loads(build_contents)['core']['depends'], loads(build_contents)['build']['files']])+"\n")
+                installed_pkgs.truncate()
+                installed_pkgs.close()
+            else:
+                installed_pkgs = open("/etc/nemesis-pkg/installed-packages.PKGLIST" , 'w')
+                installed_pkgs.write((str([loads(build_contents)['core']['name'] , loads(build_contents)['core']['version'] , loads(build_contents)['core']['depends'], loads(build_contents)['build']['files']])+"\n"))
+                installed_pkgs.close()
         else:
             ctime = strftime("%D %H:%M:%S")
             write_log(f"{ctime} ERROR {pname} failed to install")
             print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: {loads(build_contents)['core']['name']} installed unsucessfully")
+                
     except (TOMLDecodeError, KeyError):
         ctime = strftime("%D %H:%M:%S")
         write_log(f"{ctime} ERROR {pname} failed to install")
         print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: either this package is missing or the build file is corrupt... please open a bug report to the NemesisOS Developers regarding this issue.")
 
 VERSION = 0.1
-BUILD_NUM = 23627
+BUILD_NUM = 23701
 
 if __name__ == "__main__":
     parse_config_file()
