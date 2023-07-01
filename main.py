@@ -143,7 +143,7 @@ def list_packages():
 def install_multiple_packages(pkglist: list[str]):
     for i in pkglist:
         install_packages(i)
-    
+  
 def install_packages(pname: str):
     print(f"{ANSI_CODES[3]}build{ANSI_CODES[4]}: checking if {pname} is in repositories..")
     preserve_build_files = False
@@ -221,7 +221,7 @@ def install_packages(pname: str):
                 installed_pkgs.close()
             else:
                 installed_pkgs = open("/etc/nemesis-pkg/installed-packages.PKGLIST" , 'w')
-		installed_pkgs.write(loads(build_contents)['core']['name']+" "+loads(build_contents)['core']['version']+" "+str(loads(build_contents)['core']['depends'])+" "+str(loads(build_contents)['build']['files'])+"\n")
+                installed_pkgs.write(loads(build_contents)['core']['name']+" "+loads(build_contents)['core']['version']+" "+str(loads(build_contents)['core']['depends'])+" "+str(loads(build_contents)['build']['files'])+"\n")
                 installed_pkgs.close()
         else:
             ctime = strftime("%D %H:%M:%S")
@@ -237,8 +237,13 @@ def list_installed():
     print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: this is the list of all installed packages")
     try:
         ipkglist_open = open("/etc/nemesis-pkg/installed-packages.PKGLIST" , 'r')
+        a = []
         for i in ipkglist_open.read().splitlines():
-            print(i.split()[0], f"{ANSI_CODES[1]}{i.split()[1]}{ANSI_CODES[4]}")
+            a.append(i.split()[0]+f" {ANSI_CODES[1]}{i.split()[1]}{ANSI_CODES[4]}")
+
+        a.sort()
+        for i in a:
+            print(i)
             
         ipkglist_open.close()
     except URLError:
