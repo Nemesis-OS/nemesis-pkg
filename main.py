@@ -249,6 +249,32 @@ def list_installed():
     except URLError:
         print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: something went wrong")
 
+def list_repos():
+    print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: the available repositories are:")
+    for i in REPOLIST:
+        print(i[2])
+
+def list_pkgs_from_repo(rname: str):
+    print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: checking if {rname} is a valid repository")
+    rexists = False
+    rpofile = ""
+    for i in REPOLIST:
+        if rname not in i:
+            continue
+        else:
+            rexists = True
+            rpofile = "/etc/nemesis-pkg/"+i[1]
+            break
+    
+
+    if rexists == False:
+        print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: {rname} is not a valid repository.")
+    else:
+        print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: showing the list of packages present in {rname}")
+        rpofile_open = open(rpofile , 'r')
+        for i in rpofile_open.read().splitlines():
+            print(i.split()[0], f"{ANSI_CODES[2]}{i.split()[1]}{ANSI_CODES[4]}")
+            
 VERSION = 0.1
 BUILD_NUM = 23701
 
@@ -271,6 +297,14 @@ if __name__ == "__main__":
         elif len(argv) >= 2 and argv[1] == "list":
             if len(argv) == 3 and argv[2] == "installed":
                 list_installed()
+            elif len(argv) == 3 and argv[2] == "repos":
+                list_repos()
+            elif len(argv) == 3 and argv[2] == "help":
+                print('list: this allows you to list packages/repos\n============================================\ninstalled: shows the installed packages and their versions\nrepos: shows the list of repositories\nrepo_name: shows the list of packages in repo_name\ndefault: shows the list of all packages in every repo')
+            elif len(argv) == 3 and argv[2] == "default":
+                list_packages()
+            elif len(argv) == 3:
+                list_pkgs_from_repo(argv[2])
             else:
                 list_packages()
         elif len(argv) >=2 and argv[1] == "install":
