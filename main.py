@@ -8,6 +8,7 @@ from time import strftime
 from tomllib import loads, TOMLDecodeError
 from urllib.request import urlopen
 from urllib.error import URLError
+from ast import literal_eval
 
 disable_check_important_files = False
 preserve_build_files = True
@@ -274,9 +275,68 @@ def list_pkgs_from_repo(rname: str):
         rpofile_open = open(rpofile , 'r')
         for i in rpofile_open.read().splitlines():
             print(i.split()[0], f"{ANSI_CODES[2]}{i.split()[1]}{ANSI_CODES[4]}")
-            
+
+def uninstall_package(pname: str):
+    print(f"{ANSI_CODES[3]}info{ANSI_CODES[4]}: checking if {pname} is a valid package")
+    try:
+        installed_pkgs = open("/etc/nemesis-pkg/installed-packages.PKGLIST" , 'r+')
+        pass
+    except FileNotFoundError:
+        print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: the database storing the list of installed packages is not found")
+        exit(1)
+
+    installed_packages_db = installed_pkgs.read().splitlines()
+    pfound = False
+    dlist = []
+    pkg_flist = ""
+    for i in installed_packages_db:
+        if i == "":
+            continue
+        elif pname == i.split()[0]:
+            pfound = True
+            pkg_flist = i.split()[3]
+        elif pname in literal_eval(i.split()[2]):
+            dlist.append(i.split()[0])
+        else:
+            continue
+
+    if pfound == True and dlist == []:
+        print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: removing {pname}")
+        pass
+    elif dlist != []:
+        print(f"{ANSI_CODES[2]}warning{ANSI_CODES[4]}: removing {pname} will remove the following packages:")
+        for i in dlist:
+            print(i)
+        input_yn = input(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: removing {pname} will remove these packages... do you want to remove them?[{ANSI_CODES[1]}y{ANSI_CODES[4]}/{ANSI_CODES[0]}n{ANSI_CODES[4]}] ")
+        if input_yn == "n" or input_yn == "N":
+            print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: {pname} not removed")
+            exit()
+        else:
+            pass
+    else:
+        print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: {pname} not installed")
+        exit(1)
+
+    pkg_flist = literal_eval(pkg_flist)
+    for i in pkg_flist:
+        print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: removing {i} from filesystem..")
+        if isfile(i) == True:
+            if system(f"rm {i}") == 0:
+                continue
+            else:
+                print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: {pname} not uninstalled")
+                break
+        else:
+            if system(f"rm -rf {i}") == 0:
+                continue
+            else:
+                print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: {pname} not uninstalled")
+                break
+
+    print(f"{ANSI_CODES[1]}sucess{ANSI_CODES[4]}: {pname} uninstalled..")
+           
 VERSION = 0.1
-BUILD_NUM = 23701
+BUILD_NUM = 23702
 
 if __name__ == "__main__":
     parse_config_file()
@@ -314,6 +374,8 @@ if __name__ == "__main__":
                 a = []
                 for i in range(2, len(argv)):a.append(argv[i])
                 install_multiple_packages(a)
+        elif len(argv) >= 2 and argv[1] == "uninstall":
+            uninstall_package(argv[2])
         else:
             print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: invalid operation")
 
