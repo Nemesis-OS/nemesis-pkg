@@ -279,6 +279,7 @@ def list_pkgs_from_repo(rname: str):
 def uninstall_package(pname: str):
     print(f"{ANSI_CODES[3]}info{ANSI_CODES[4]}: checking if {pname} is a valid package")
     try:
+        system("cp /etc/nemesis-pkg/installed-packages.PKGLIST /etc/nemesis-pkg/installed-packages.PKGLIST.bak")
         installed_pkgs = open("/etc/nemesis-pkg/installed-packages.PKGLIST" , 'r+')
         pass
     except FileNotFoundError:
@@ -309,11 +310,15 @@ def uninstall_package(pname: str):
             print(i)
         input_yn = input(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: removing {pname} will remove these packages... do you want to remove them?[{ANSI_CODES[1]}y{ANSI_CODES[4]}/{ANSI_CODES[0]}n{ANSI_CODES[4]}] ")
         if input_yn == "n" or input_yn == "N":
+            installed_pkgs.close()
             print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: {pname} not removed")
             exit()
         else:
-            pass
+            for i in dlist:
+                print(f"{ANSI_CODES[2]}info{ANSI_CODES[4]}: uninstalling {i}")
+                uninstall_package(i)
     else:
+        installed_pkgs.close()
         print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: {pname} not installed")
         exit(1)
 
@@ -324,19 +329,37 @@ def uninstall_package(pname: str):
             if system(f"rm {i}") == 0:
                 continue
             else:
+                installed_pkgs.close()
                 print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: {pname} not uninstalled")
                 break
         else:
             if system(f"rm -rf {i}") == 0:
                 continue
             else:
+                installed_pkgs.close()
                 print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: {pname} not uninstalled")
                 break
 
     print(f"{ANSI_CODES[1]}sucess{ANSI_CODES[4]}: {pname} uninstalled..")
+
+    installed_pkg_bak = open("/etc/nemesis-pkg/installed-packages.PKGLIST.bak", 'r')
+    ipkglist = ""
+    for i in installed_pkg_bak.read().splitlines():
+        if i == '':
+            continue
+        elif i.split()[0] == pname:
+            continue
+        else:
+            ipkglist=ipkglist+f"{i}\n"
+            
+    installed_pkgs.seek(0)
+    installed_pkgs.write(ipkglist)
+    installed_pkgs.truncate()
+    installed_pkgs.close()
+    installed_pkg_bak.close()
            
 VERSION = 0.1
-BUILD_NUM = 23702
+BUILD_NUM = 23703
 
 if __name__ == "__main__":
     parse_config_file()
