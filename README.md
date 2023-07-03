@@ -8,6 +8,7 @@ A fast and simple package manager for Nemesis inspired from `kiss` and `pacman`.
 - [x] `log` flag to see the total operations performed by `nemesis-pkg`
 - [x] `list` flag can see what packages are in the repositories
 - [ ] `install` flag can be used to install a package
+- [ ] `uninstall` flag can be used to uninstall a package[needs some testing]
 
 ### depreciations:
 - [x] `history` its pretty much like logs and logs are way simpler and minimal[DEPRECIATED as of build 23625]
