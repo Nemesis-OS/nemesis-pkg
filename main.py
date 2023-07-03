@@ -357,7 +357,12 @@ def uninstall_package(pname: str):
     installed_pkgs.truncate()
     installed_pkgs.close()
     installed_pkg_bak.close()
-           
+
+def uninstall_multiple(plist: list[str]):
+    for i in plist:
+        print(f"{ANSI_CODES[2]}note{ANSI_CODES[4]}: removing {i}")
+        uninstall_package(i)
+        
 VERSION = 0.1
 BUILD_NUM = 23703
 
@@ -398,7 +403,12 @@ if __name__ == "__main__":
                 for i in range(2, len(argv)):a.append(argv[i])
                 install_multiple_packages(a)
         elif len(argv) >= 2 and argv[1] == "uninstall":
-            uninstall_package(argv[2])
+            if len(argv) == 3:
+                uninstall_package(argv[2])
+            else:
+                a = []
+                for i in range(2 , len(argv)):a.append(argv[i])
+                uninstall_multiple(a)
         else:
             print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: invalid operation")
 
@@ -407,3 +417,4 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: user pressed CTRL+C so exiting")
         exit(1)
+	    
