@@ -11,13 +11,13 @@ from urllib.error import URLError
 from ast import literal_eval
 
 disable_check_important_files = False
-preserve_build_files = True
+preserve_build_files = False
 ANSI_CODES = []
 REPOLIST = []
 cpu_flags = []
 
 def parse_config_file():
-    global disable_check_important_files, ANSI_CODES, REPOLIST, cpu_flags
+    global disable_check_important_files, ANSI_CODES, REPOLIST, cpu_flags, preserve_build_files
     if isfile("/etc/nemesis-pkg/config.py") == True:
         pass
     else:
@@ -41,9 +41,9 @@ def parse_config_file():
     REPOLIST = config.REPOS
 
     if config.preserve_build_files == True:
-        preserve_build_files == True
+        preserve_build_files = True
     else:
-        preserve_build_files == False
+        preserve_build_files = False
 
     if config.cpu_flags == []:
         print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: cpu flags is not defined")
@@ -147,7 +147,6 @@ def install_multiple_packages(pkglist: list[str]):
   
 def install_packages(pname: str):
     print(f"{ANSI_CODES[3]}build{ANSI_CODES[4]}: checking if {pname} is in repositories..")
-    preserve_build_files = False
     if preserve_build_files == False:
         try:
             mkdir(f"/tmp/nemesis-pkg-build/")
@@ -162,10 +161,21 @@ def install_packages(pname: str):
             except OSError:
                 system(f"rm -rf /tmp/nemesis-pkg-build/{pname}")
             mkdir(f"/tmp/nemesis-pkg-build/{pname}")
-            pass 
+            chdir(f"/tmp/nemesis-pkg-build/{pname}")
+            pass
+    else:
+        if isdir("/var/cache/nemesis-pkg") == False:
+            mkdir("/var/cache/nemesis-pkg")
+        else:
+            chdir("/var/cache/nemesis-pkg")
 
-        chdir(f"/tmp/nemesis-pkg-build/{pname}")
+        if isdir(pname) == True:
+            system(f"rm -rf {pname}")
+        else:
+            mkdir(pname)
 
+        chdir(pname)
+        
     curl = ""
 
     for i in range(0, len(REPOLIST)):
@@ -208,7 +218,10 @@ def install_packages(pname: str):
                 print(f"{ANSI_CODES[2]}info{ANSI_CODES[4]}: installing dependency {i} for {pname}")
                 install_packages(i)
                 
-        environ['NEMESIS_PKG_BUILD_DIR'] = f"/tmp/nemesis-pkg-build/{loads(build_contents)['core']['name']}/{loads(build_contents)['core']['name']}"
+        if preserve_build_files == False:
+            environ['NEMESIS_PKG_BUILD_DIR'] = f"/tmp/nemesis-pkg-build/{loads(build_contents)['core']['name']}/{loads(build_contents)['core']['name']}"
+        else:
+            environ['NEMESIS_PKG_BUILD_DIR'] = f"/var/cache/nemesis-pkg/{loads(build_contents)['core']['name']}/{loads(build_contents)['core']['name']}"
         print(f"{ANSI_CODES[2]}info{ANSI_CODES[4]}: installing {pname}")
         if system(loads(build_contents)['build']['command']) == 0:
             ctime = strftime("%D %H:%M:%S")
@@ -364,7 +377,7 @@ def uninstall_multiple(plist: list[str]):
         
 
 VERSION = 0.1
-BUILD_NUM = 23704
+BUILD_NUM = 23702
 
 if __name__ == "__main__":
     parse_config_file()
