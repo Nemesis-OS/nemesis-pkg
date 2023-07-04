@@ -33,7 +33,7 @@ def parse_config_file():
     else:
         print("config error.. ANSI_CODES is either missing or there are less than 5 numbers")
 
-    if config.check_nessary_files == False:
+    if config.check_necessary_files == False:
         disable_check_important_files = False
     else:
         disable_check_important_files = True
@@ -267,7 +267,6 @@ def list_pkgs_from_repo(rname: str):
             rpofile = "/etc/nemesis-pkg/"+i[1]
             break
     
-
     if rexists == False:
         print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: {rname} is not a valid repository.")
     else:
@@ -325,7 +324,7 @@ def uninstall_package(pname: str):
     pkg_flist = literal_eval(pkg_flist)
     for i in pkg_flist:
         print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: removing {i} from filesystem..")
-        if isfile(i) == True:
+        if i[len(i)-1] != "/":
             if system(f"rm {i}") == 0:
                 continue
             else:
@@ -363,8 +362,9 @@ def uninstall_multiple(plist: list[str]):
         print(f"{ANSI_CODES[2]}note{ANSI_CODES[4]}: removing {i}")
         uninstall_package(i)
         
+
 VERSION = 0.1
-BUILD_NUM = 23703
+BUILD_NUM = 23704
 
 if __name__ == "__main__":
     parse_config_file()
@@ -417,4 +417,3 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: user pressed CTRL+C so exiting")
         exit(1)
-	    
