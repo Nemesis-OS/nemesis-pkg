@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 #=====================================================
 #genconfig-npkg: a tool to generate nemesis-pkg config|
 #=====================================================
@@ -38,7 +38,14 @@ try:
             pass
 
         print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: fetching cpu flags.")
-        cpu_flags = check_output('lscpu').decode('utf-8').splitlines()[22].split()
+        cpu_flags = check_output('lscpu').decode('utf-8').splitlines()
+        for i in cpu_flags:
+            if i.split()[0] != "Flags:":
+                continue
+            else:
+                cpu_flags = i.split()
+                break
+            
         cpu_flags.pop(0)
         
         if cpu_flags == []:
