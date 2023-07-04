@@ -11,7 +11,7 @@ REPOS = [
     ["https://raw.githubusercontent.com/Nemesis-OS/packages-security/main/security.PKGLIST" , "security.PKGLIST" , "security-updates" , "https://raw.githubusercontent.com/Nemesis-OS/packages-security/main/"]
 ]
 
-check_nessary_files = True
+check_necessary_files = True
 
 preserve_build_files = True
 
