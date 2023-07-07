@@ -146,7 +146,15 @@ def install_multiple_packages(pkglist: list[str]):
         install_packages(i)
   
 def install_packages(pname: str):
-    print(f"{ANSI_CODES[3]}build{ANSI_CODES[4]}: checking if {pname} is in repositories..")
+    if return_if_pkg_exist(pname) == None:
+        pass
+    else:
+        reinstall_yn = input(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: {ANSI_CODES[2]}{pname}{ANSI_CODES[4]} is installed.. do you wanna reinstall[{ANSI_CODES[1]}y{ANSI_CODES[4]}/{ANSI_CODES[0]}n{ANSI_CODES[4]}] ")
+        if reinstall_yn == "n" or reinstall_yn == "N":
+            return None
+        else:
+            pass
+        
     if preserve_build_files == False:
         try:
             mkdir(f"/tmp/nemesis-pkg-build/")
@@ -156,28 +164,27 @@ def install_packages(pname: str):
         try:
             mkdir(f"/tmp/nemesis-pkg-build/{pname}")
         except FileExistsError:
-            try:
-                rmdir(f"/tmp/nemesis-pkg-build/{pname}")
-            except OSError:
-                system(f"rm -rf /tmp/nemesis-pkg-build/{pname}")
+            system(f"rm -rf /tmp/nemesis-pkg-build/{pname}")
             mkdir(f"/tmp/nemesis-pkg-build/{pname}")
             chdir(f"/tmp/nemesis-pkg-build/{pname}")
             pass
     else:
-        if isdir("/var/cache/nemesis-pkg") == False:
+        try:
             mkdir("/var/cache/nemesis-pkg")
-        else:
-            chdir("/var/cache/nemesis-pkg")
+        except FileExistsError:
+            pass
 
-        if isdir(pname) == True:
-            system(f"rm -rf {pname}")
-        else:
-            mkdir(pname)
+        try:
+            mkdir(f"/var/cache/nemesis-pkg/{pname}")
+        except FileExistsError:
+            system(f"rm -rf /var/cache/nemesis-pkg/{pname}")
+            mkdir(f"/var/cache/nemesis-pkg/{pname}")
 
-        chdir(pname)
+        chdir(f"/var/cache/nemesis-pkg/{pname}")
         
     curl = ""
 
+    print(f"{ANSI_CODES[3]}build{ANSI_CODES[4]}: checking if {ANSI_CODES[2]}{pname}{ANSI_CODES[4]} is in repositories..")
     for i in range(0, len(REPOLIST)):
         try:
             urlopen(REPOLIST[i][3]+f"{pname}/build")
@@ -374,10 +381,23 @@ def uninstall_multiple(plist: list[str]):
     for i in plist:
         print(f"{ANSI_CODES[2]}note{ANSI_CODES[4]}: removing {i}")
         uninstall_package(i)
-        
+
+def return_if_pkg_exist(query: str):
+    try:
+        pkglist = open("/etc/nemesis-pkg/installed-packages.PKGLIST" , 'r')
+        for i in pkglist.read().splitlines():
+            if i.split()[0] == query:
+                pkglist.close()
+                return True
+            else:
+                continue
+
+            pkglist.close()
+    except Exception:
+        print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: {ANSI_CODES[2]}/etc/nemesis-pkg/installed-packages.PKGLIST{ANSI_CODES[4]} might be corrupt.. ")
 
 VERSION = 0.1
-BUILD_NUM = 23702
+BUILD_NUM = 23707
 
 if __name__ == "__main__":
     parse_config_file()
