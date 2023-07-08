@@ -397,7 +397,7 @@ def return_if_pkg_exist(query: str):
         print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: {ANSI_CODES[2]}/etc/nemesis-pkg/installed-packages.PKGLIST{ANSI_CODES[4]} might be corrupt.. ")
 
 VERSION = 0.1
-BUILD_NUM = 23707
+BUILD_ID = "-rc1"
 
 if __name__ == "__main__":
     parse_config_file()
