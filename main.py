@@ -217,16 +217,16 @@ def install_packages(pname: str):
         for j in current_db.read().splitlines():
             if j.split()[0] == pname:
                 pkg_in_repo = True
+                pkg_in_w_repo = REPOLIST[i]
+                curl = f"{REPOLIST[i][3]}{pname}/build"
                 current_db.close()
-                break
             else:
+                pkg_in_repo = False
                 current_db.close()                
                 continue
 
         current_db.close()
         if pkg_in_repo == True:
-            pkg_in_w_repo = REPOLIST[i][2]
-            curl = f"{REPOLIST[i][3]}{pname}/build"
             continue
         else:
             continue
@@ -241,7 +241,6 @@ def install_packages(pname: str):
     build_contents = check_output(['curl' , curl]).decode('utf-8')
 
     try:
-
         if loads(build_contents)['core']['cpu_flags'] == []:
             pass
         else:
