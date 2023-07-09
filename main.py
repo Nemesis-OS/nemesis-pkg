@@ -6,8 +6,6 @@ from subprocess import check_output, CalledProcessError
 from shutil import copy
 from time import strftime
 from tomllib import loads, TOMLDecodeError
-from urllib.request import urlopen
-from urllib.error import URLError
 from ast import literal_eval
 
 disable_check_important_files = False
@@ -15,6 +13,13 @@ preserve_build_files = False
 ANSI_CODES = []
 REPOLIST = []
 cpu_flags = []
+
+def check_user_is_root():
+    cuser = check_output('whoami')
+    if cuser == b'root\n':
+        return True
+    else:
+        return False
 
 def parse_config_file():
     global disable_check_important_files, ANSI_CODES, REPOLIST, cpu_flags, preserve_build_files
@@ -123,6 +128,12 @@ def view_log():
         print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: file not found")
 
 def remove_log():
+    if check_user_is_root() == True:
+        pass
+    else:
+        print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: user is not root")
+        exit(1)
+        
     yn = str(input(f"{ANSI_CODES[2]}warning{ANSI_CODES[4]}: removing the logfile will delete the list of all the operations you executed...[{ANSI_CODES[1]}y{ANSI_CODES[4]}/{ANSI_CODES[0]}N{ANSI_CODES[4]}] "))
     if yn == "y" or yn == "Y":
         print(f"{ANSI_CODES[3]}info{ANSI_CODES[4]}: removing logfile")
@@ -142,10 +153,26 @@ def list_packages():
             print(str(f"{ANSI_CODES[2]}{REPOLIST[i][2]}{ANSI_CODES[4]}/{h.split()[0]} {ANSI_CODES[1]}{h.split()[1]}{ANSI_CODES[4]}"))
             
 def install_multiple_packages(pkglist: list[str]):
+    if check_user_is_root() == True:
+        pass
+    else:
+        print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: user is not root")
+        exit(1)
+        
     for i in pkglist:
         install_packages(i)
   
 def install_packages(pname: str):
+    if check_user_is_root() == True:
+        pass
+    else:
+        print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: user is not root")
+        exit(1)
+
+    pkg_in_repo = False
+    pkg_in_w_repo = False
+    reinstall_mode = False
+    
     if return_if_pkg_exist(pname) == None:
         pass
     else:
@@ -186,12 +213,23 @@ def install_packages(pname: str):
 
     print(f"{ANSI_CODES[3]}build{ANSI_CODES[4]}: checking if {ANSI_CODES[2]}{pname}{ANSI_CODES[4]} is in repositories..")
     for i in range(0, len(REPOLIST)):
-        try:
-            urlopen(REPOLIST[i][3]+f"{pname}/build")
-        except URLError:
+        current_db = open(f"/etc/nemesis-pkg/{REPOLIST[i][1]}", 'r')
+        for j in current_db.read().splitlines():
+            if j.split()[0] == pname:
+                pkg_in_repo = True
+                current_db.close()
+                break
+            else:
+                current_db.close()                
+                continue
+
+        current_db.close()
+        if pkg_in_repo == True:
+            pkg_in_w_repo = REPOLIST[i][2]
+            curl = f"{REPOLIST[i][3]}{pname}/build"
             continue
-        
-        curl = REPOLIST[i][3]+f"{pname}/build"
+        else:
+            continue
         
     if curl == "":
         print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: {ANSI_CODES[2]}{pname}{ANSI_CODES[4]} is not in any repositories")
@@ -267,7 +305,7 @@ def list_installed():
             print(i)
             
         ipkglist_open.close()
-    except URLError:
+    except Exception:
         print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: something went wrong")
 
 def list_repos():
@@ -296,6 +334,12 @@ def list_pkgs_from_repo(rname: str):
             print(i.split()[0], f"{ANSI_CODES[2]}{i.split()[1]}{ANSI_CODES[4]}")
 
 def uninstall_package(pname: str):
+    if check_user_is_root() == True:
+        pass
+    else:
+        print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: user is not root")
+        exit(0)
+        
     print(f"{ANSI_CODES[3]}info{ANSI_CODES[4]}: checking if {pname} is a valid package")
     try:
         system("cp /etc/nemesis-pkg/installed-packages.PKGLIST /etc/nemesis-pkg/installed-packages.PKGLIST.bak")
@@ -405,7 +449,7 @@ if __name__ == "__main__":
         if len(argv) >= 2 and argv[1] == "sync":
             sync_packages(REPOLIST)
         elif len(argv) >= 2 and argv[1] == "version" or argv[1] == "-v":
-            print(f"nemesis-pkg build {VERSION} {BUILD_NUM}")
+            print(f"nemesis-pkg build {VERSION}{BUILD_ID}")
         elif len(argv) >= 2 and argv[1] == "log":
             if len(argv) == 2:
                 print("log: this allows you to view/delete logs\n========================================\nview: this allows you to view logfile\ndelete: this allows you to delete logfile")
