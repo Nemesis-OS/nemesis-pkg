@@ -1,9 +1,8 @@
 #!/usr/bin/python3
-from os import mkdir, chdir, system, environ, rmdir
-from os.path import isdir, isfile
-from sys import argv, exit, path
+from os import mkdir, chdir, system, environ
+from os.path import isfile
+from sys import argv, path, exit
 from subprocess import check_output, CalledProcessError
-from shutil import copy
 from time import strftime
 from tomllib import loads, TOMLDecodeError
 from ast import literal_eval
@@ -27,8 +26,7 @@ def parse_config_file():
         pass
     else:
         print("error: config file not found")
-        exit(1)
-        
+        exit(1)        
     chdir("/etc/nemesis-pkg")
     path.append("/etc/nemesis-pkg")
     import config
@@ -54,7 +52,6 @@ def parse_config_file():
         print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: cpu flags is not defined")
     else:
         config.cpu_flags = cpu_flags
-    
 def sync_packages(PKGLIST: list[list[str]]):
     if check_output("whoami") != b'root\n':
         print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: root user can only run update")
@@ -65,14 +62,14 @@ def sync_packages(PKGLIST: list[list[str]]):
     for i in range(0 , len(PKGLIST)):                
         fexists = False
         print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: updating {ANSI_CODES[2]}{PKGLIST[i][1]}{ANSI_CODES[4]}")
-        if isfile(f"/etc/nemesis-pkg/{PKGLIST[i][1]}") == True:
+        if isfile(f"/etc/nemesis-pkg/{PKGLIST[i][1]}") is True:
             fexists = True
             plist = open(f"/etc/nemesis-pkg/{PKGLIST[i][1]}" , 'r+')
             list_contents = plist.read()
             pass
         else:
             print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: {ANSI_CODES[2]}{PKGLIST[i][1]}{ANSI_CODES[4]} not found so creating it..")
-            plist = open(f"/etc/nemesis-pkg/{PKGLIST[i][1]}" , 'w')    
+            plist = open(f"/etc/nemesis-pkg/{PKGLIST[i][1]}" , 'w', encoding="utf-8")    
         downloaded_version = check_output(['curl' , PKGLIST[i][0]]).decode("utf-8")
         
         if fexists == False:
@@ -135,7 +132,7 @@ def remove_log():
         exit(1)
         
     yn = str(input(f"{ANSI_CODES[2]}warning{ANSI_CODES[4]}: removing the logfile will delete the list of all the operations you executed...[{ANSI_CODES[1]}y{ANSI_CODES[4]}/{ANSI_CODES[0]}N{ANSI_CODES[4]}] "))
-    if yn == "y" or yn == "Y":
+    if yn in ["Y", 'y']:
         print(f"{ANSI_CODES[3]}info{ANSI_CODES[4]}: removing logfile")
         chdir("/etc/nemesis-pkg")
         if system("rm nemesis-pkg.log") == 0:
@@ -163,7 +160,7 @@ def install_multiple_packages(pkglist: list[str]):
         install_packages(i)
   
 def install_packages(pname: str):
-    if check_user_is_root() == True:
+    if check_user_is_root() is True:
         pass
     else:
         print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: user is not root")
@@ -173,16 +170,16 @@ def install_packages(pname: str):
     pkg_in_w_repo = False
     reinstall_mode = False
     
-    if return_if_pkg_exist(pname) == None:
+    if return_if_pkg_exist(pname) is None:
         pass
     else:
         reinstall_yn = input(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: {ANSI_CODES[2]}{pname}{ANSI_CODES[4]} is installed.. do you wanna reinstall[{ANSI_CODES[1]}y{ANSI_CODES[4]}/{ANSI_CODES[0]}n{ANSI_CODES[4]}] ")
-        if reinstall_yn == "n" or reinstall_yn == "N":
+        if reinstall_yn in ('n', 'N'):
             return None
         else:
             pass
         
-    if preserve_build_files == False:
+    if preserve_build_files is False:
         try:
             mkdir(f"/tmp/nemesis-pkg-build/")
         except FileExistsError:
@@ -213,9 +210,9 @@ def install_packages(pname: str):
 
     print(f"{ANSI_CODES[3]}build{ANSI_CODES[4]}: checking if {ANSI_CODES[2]}{pname}{ANSI_CODES[4]} is in repositories..")
     for i in range(0, len(REPOLIST)):
-        current_db = open(f"/etc/nemesis-pkg/{REPOLIST[i][1]}", 'r')
+        current_db = open(f"/etc/nemesis-pkg/{REPOLIST[i][1]}", 'r', encoding="utf-8")
         for j in current_db.read().splitlines():
-            if j.split()[0] == pname:
+            if j.split()[0] in pname:
                 pkg_in_repo = True
                 pkg_in_w_repo = REPOLIST[i]
                 curl = f"{REPOLIST[i][3]}{pname}/build"
@@ -226,19 +223,23 @@ def install_packages(pname: str):
                 continue
 
         current_db.close()
-        if pkg_in_repo == True:
+        if pkg_in_repo is True:
             continue
         else:
             continue
         
-    if curl == "":
+    if curl is "":
         print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: {ANSI_CODES[2]}{pname}{ANSI_CODES[4]} is not in any repositories")
         exit(1)
     else:
         pass
 
     print(f"{ANSI_CODES[3]}info{ANSI_CODES[4]}: downloading build.toml")
-    build_contents = check_output(['curl' , curl]).decode('utf-8')
+    try:
+        build_contents = check_output(['curl' , curl]).decode('utf-8')
+    except CalledProcessError:
+        print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: {ANSI_CODES[2]}build.toml{ANSI_CODES[4]} failed to download")
+        exit(1)
 
     try:
         if loads(build_contents)['core']['cpu_flags'] == []:
@@ -278,7 +279,7 @@ def install_packages(pname: str):
                 installed_pkgs.truncate()
                 installed_pkgs.close()
             else:
-                installed_pkgs = open("/etc/nemesis-pkg/installed-packages.PKGLIST" , 'w')
+                installed_pkgs = open("/etc/nemesis-pkg/installed-packages.PKGLIST" , 'w', encoding="utf-8")
                 installed_pkgs.write(loads(build_contents)['core']['name']+" "+loads(build_contents)['core']['version']+" "+str(loads(build_contents)['core']['depends'])+" "+str(loads(build_contents)['build']['files'])+"\n")
                 installed_pkgs.close()
         else:
@@ -294,13 +295,13 @@ def install_packages(pname: str):
 def list_installed():
     print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: this is the list of all installed packages")
     try:
-        ipkglist_open = open("/etc/nemesis-pkg/installed-packages.PKGLIST" , 'r')
+        ipkglist_open = open("/etc/nemesis-pkg/installed-packages.PKGLIST" , 'r', encoding="utf-8")
         a = []
-        for i in ipkglist_open.read().splitlines():
-            a.append(i.split()[0]+f" {ANSI_CODES[1]}{i.split()[1]}{ANSI_CODES[4]}")
+        for installed_pkgs in ipkglist_open.read().splitlines():
+            a.append(installed_pkgs.split()[0]+f" {ANSI_CODES[1]}{i.split()[1]}{ANSI_CODES[4]}")
 
         a.sort()
-        for i in a:
+        for installed_pkgs in a:
             print(i)
             
         ipkglist_open.close()
@@ -371,7 +372,7 @@ def uninstall_package(pname: str):
         for i in dlist:
             print(i)
         input_yn = input(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: removing {pname} will remove these packages... do you want to remove them?[{ANSI_CODES[1]}y{ANSI_CODES[4]}/{ANSI_CODES[0]}n{ANSI_CODES[4]}] ")
-        if input_yn == "n" or input_yn == "N":
+        if input_yn in ("n", "N"):
             installed_pkgs.close()
             print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: {pname} not removed")
             exit()
@@ -385,7 +386,7 @@ def uninstall_package(pname: str):
         exit(1)
 
     pkg_flist = literal_eval(pkg_flist)
-    for i in pkg_flist:
+    for filelist in pkg_flist:
         print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: removing {i} from filesystem..")
         if i[len(i)-1] != "/":
             if system(f"rm {i}") == 0:
@@ -436,7 +437,7 @@ def return_if_pkg_exist(query: str):
                 continue
 
             pkglist.close()
-    except Exception:
+    except (FileNotFoundError, IndexError):
         print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: {ANSI_CODES[2]}/etc/nemesis-pkg/installed-packages.PKGLIST{ANSI_CODES[4]} might be corrupt.. ")
 
 VERSION = 0.1
@@ -483,7 +484,8 @@ if __name__ == "__main__":
                 uninstall_package(argv[2])
             else:
                 a = []
-                for i in range(2 , len(argv)):a.append(argv[i])
+                for i in range(2 , len(argv)):
+                    a.append(argv[i])
                 uninstall_multiple(a)
         else:
             print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: invalid operation")
