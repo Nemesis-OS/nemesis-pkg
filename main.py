@@ -11,22 +11,23 @@ disable_check_important_files = False
 preserve_build_files = False
 ANSI_CODES = []
 REPOLIST = []
-cpu_flags = []
+CPU_FLAGS = []
 
 def check_user_is_root():
     cuser = check_output('whoami')
     if cuser == b'root\n':
-        return True
+        return bool(True)
     else:
-        return False
+        return bool(False)
 
 def parse_config_file():
     global disable_check_important_files, ANSI_CODES, REPOLIST, cpu_flags, preserve_build_files
-    if isfile("/etc/nemesis-pkg/config.py") == True:
+    if isfile("/etc/nemesis-pkg/config.py") is True:
         pass
     else:
         print("error: config file not found")
-        exit(1)        
+        exit(1)
+        
     chdir("/etc/nemesis-pkg")
     path.append("/etc/nemesis-pkg")
     import config
@@ -36,22 +37,23 @@ def parse_config_file():
     else:
         print("config error.. ANSI_CODES is either missing or there are less than 5 numbers")
 
-    if config.check_necessary_files == False:
+    if config.check_necessary_files is False:
         disable_check_important_files = False
     else:
         disable_check_important_files = True
 
     REPOLIST = config.REPOS
 
-    if config.preserve_build_files == True:
+    if config.preserve_build_files is True:
         preserve_build_files = True
     else:
         preserve_build_files = False
 
-    if config.cpu_flags == []:
+    if config.cpu_flags is []:
         print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: cpu flags is not defined")
     else:
-        config.cpu_flags = cpu_flags
+        config.cpu_flags = CPU_FLAGS
+
 def sync_packages(PKGLIST: list[list[str]]):
     if check_output("whoami") != b'root\n':
         print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: root user can only run update")
@@ -64,7 +66,7 @@ def sync_packages(PKGLIST: list[list[str]]):
         print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: updating {ANSI_CODES[2]}{PKGLIST[i][1]}{ANSI_CODES[4]}")
         if isfile(f"/etc/nemesis-pkg/{PKGLIST[i][1]}") is True:
             fexists = True
-            plist = open(f"/etc/nemesis-pkg/{PKGLIST[i][1]}" , 'r+')
+            plist = open(f"/etc/nemesis-pkg/{PKGLIST[i][1]}" , 'r+', encoding="utf-8")
             list_contents = plist.read()
             pass
         else:
@@ -113,12 +115,12 @@ def write_log(text: str):
             logfile.write(f"{text}\n")
         logfile.truncate()
         logfile.close()
-
+        
 def view_log():
     print(f"{ANSI_CODES[3]}info{ANSI_CODES[4]}: viewing the nemesis-pkg log file")
     chdir("/etc/nemesis-pkg")
     try:
-        logfile = open("/etc/nemesis-pkg/nemesis-pkg.log" , 'r')
+        logfile = open("/etc/nemesis-pkg/nemesis-pkg.log" , 'r', encoding="utf-8")
         print(logfile.read())
         logfile.close()
     except FileNotFoundError:
@@ -228,7 +230,7 @@ def install_packages(pname: str):
         else:
             continue
         
-    if curl is "":
+    if curl == "":
         print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: {ANSI_CODES[2]}{pname}{ANSI_CODES[4]} is not in any repositories")
         exit(1)
     else:
@@ -248,7 +250,7 @@ def install_packages(pname: str):
             print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: checking if your cpu has neccesary instruction sets")            
             for i in loads(build_contents)['core']['cpu_flags']:
                 if i in cpu_flags:
-                    continue
+                    pass
                 else:
                     print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: {i} not in cpu flags")
                     exit(1)
@@ -298,11 +300,11 @@ def list_installed():
         ipkglist_open = open("/etc/nemesis-pkg/installed-packages.PKGLIST" , 'r', encoding="utf-8")
         a = []
         for installed_pkgs in ipkglist_open.read().splitlines():
-            a.append(installed_pkgs.split()[0]+f" {ANSI_CODES[1]}{i.split()[1]}{ANSI_CODES[4]}")
+            a.append(installed_pkgs.split()[0]+f" {ANSI_CODES[1]}{installed_pkgs.split()[1]}{ANSI_CODES[4]}")
 
         a.sort()
         for installed_pkgs in a:
-            print(i)
+            print(installed_pkgs)
             
         ipkglist_open.close()
     except Exception:
@@ -440,6 +442,33 @@ def return_if_pkg_exist(query: str):
     except (FileNotFoundError, IndexError):
         print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: {ANSI_CODES[2]}/etc/nemesis-pkg/installed-packages.PKGLIST{ANSI_CODES[4]} might be corrupt.. ")
 
+def search_package(query: str):
+    print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: looking for pkgs matching to {ANSI_CODES[2]}{query}{ANSI_CODES[4]}")
+    arr = []
+    for repo_files in REPOLIST:
+        file = open(repo_files[1], 'r', encoding="utf-8")
+        for pkg in file.read().splitlines():
+            chars = []
+            for let in range(0, len(query)):
+                if query in arr:
+                    pass
+                elif query[let] in pkg.split()[0]:
+                    chars.append(query[let])
+            
+            if len(chars) == len(query) and pkg.split()[0] not in arr:
+                arr.append(pkg.split()[0])
+            else:
+                pass
+                        
+        file.close()
+        
+    arr.sort()
+    for matching in arr:
+        if return_if_pkg_exist(matching) == True:
+            print(f"{matching}{ANSI_CODES[1]}[installed]{ANSI_CODES[4]}")
+        else:
+            print(matching)
+        
 VERSION = 0.1
 BUILD_ID = "-rc1"
 
@@ -487,6 +516,8 @@ if __name__ == "__main__":
                 for i in range(2 , len(argv)):
                     a.append(argv[i])
                 uninstall_multiple(a)
+        elif len(argv) >=2 and argv[1] in ("s", "search"):
+            search_package(argv[2])
         else:
             print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: invalid operation")
 
