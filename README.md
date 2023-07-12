@@ -1,5 +1,5 @@
 # nemesis-pkg
-A fast and simple package manager for Nemesis inspired from `kiss` and `pacman`. This is completely written from scratch...
+A fast and simple package manager for Nemesis inspired from `kiss` and `pacman`. This is completely written from scratch in pure python with no pip needed...
 
 # usage:-
 `nemsis-pkg` has various flags that performs operations and some operations have their args.
@@ -7,7 +7,8 @@ A fast and simple package manager for Nemesis inspired from `kiss` and `pacman`.
 - [x] `sync` flag to sync the package database
 - [x] `log` flag to see the total operations performed by `nemesis-pkg`
 - [x] `list` flag can see what packages are in the repositories
-- [ ] `install` flag can be used to install a package
+- [x] `search` flag can search what packages are there..
+- [ ] `install` flag can be used to install a package[needs some stuff to be added]
 - [ ] `uninstall` flag can be used to uninstall a package[needs some testing]
 
 ### depreciations:
