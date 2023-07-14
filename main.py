@@ -5,11 +5,12 @@ from sys import argv, path, exit
 from subprocess import check_output, CalledProcessError
 from time import strftime
 from tomllib import loads, TOMLDecodeError
+from json import loads, dumps
 from ast import literal_eval
 
 disable_check_important_files = False
 preserve_build_files = False
-ANSI_CODES = []
+ANSI_CODES = ['\x1b[31m', '\x1b[32m', '\x1b[33m', '\x1b[34m', '\x1b[0m']
 REPOLIST = []
 CPU_FLAGS = []
 
@@ -22,37 +23,28 @@ def check_user_is_root():
 
 def parse_config_file():
     global disable_check_important_files, ANSI_CODES, REPOLIST, cpu_flags, preserve_build_files
-    if isfile("/etc/nemesis-pkg/config.py") is True:
+    if isfile("/etc/nemesis-pkg/config.json") is True:
         pass
     else:
-        print("error: config file not found")
+        print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: config file not found")
         exit(1)
         
-    chdir("/etc/nemesis-pkg")
-    path.append("/etc/nemesis-pkg")
-    import config
+    with open("/etc/nemesis-pkg/config.json", 'r', encoding="utf-8") as config_file:
+        config = loads(config_file.read())
 
-    if str(type(config.ANSI_CODES)) == "<class 'list'>" and len(config.ANSI_CODES) == 5:
-        ANSI_CODES = config.ANSI_CODES
-    else:
-        print("config error.. ANSI_CODES is either missing or there are less than 5 numbers")
+    config_file.close()
 
-    if config.check_necessary_files is False:
-        disable_check_important_files = False
-    else:
-        disable_check_important_files = True
+    REPOLIST = config['REPOS']
 
-    REPOLIST = config.REPOS
-
-    if config.preserve_build_files is True:
+    if config['SAVE_BUILD_FILES'] is True:
         preserve_build_files = True
     else:
         preserve_build_files = False
 
-    if config.cpu_flags is []:
+    if not config['CPU_FLAGS']:
         print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: cpu flags is not defined")
     else:
-        config.cpu_flags = CPU_FLAGS
+        cpu_flags = config['CPU_FLAGS']
 
 def sync_packages(PKGLIST: list[list[str]]):
     if check_output("whoami") != b'root\n':
@@ -63,7 +55,7 @@ def sync_packages(PKGLIST: list[list[str]]):
     
     for i in range(0 , len(PKGLIST)):                
         fexists = False
-        print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: updating {ANSI_CODES[2]}{PKGLIST[i][1]}{ANSI_CODES[4]}")
+        print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: updating {ANSI_CODES[2]}{PKGLIST[i][2]}{ANSI_CODES[4]}")
         if isfile(f"/etc/nemesis-pkg/{PKGLIST[i][1]}") is True:
             fexists = True
             plist = open(f"/etc/nemesis-pkg/{PKGLIST[i][1]}" , 'r+', encoding="utf-8")
@@ -71,8 +63,12 @@ def sync_packages(PKGLIST: list[list[str]]):
             pass
         else:
             print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: {ANSI_CODES[2]}{PKGLIST[i][1]}{ANSI_CODES[4]} not found so creating it..")
-            plist = open(f"/etc/nemesis-pkg/{PKGLIST[i][1]}" , 'w', encoding="utf-8")    
-        downloaded_version = check_output(['curl' , PKGLIST[i][0]]).decode("utf-8")
+            plist = open(f"/etc/nemesis-pkg/{PKGLIST[i][1]}" , 'w', encoding="utf-8")
+        try:
+            downloaded_version = check_output(['curl' , PKGLIST[i][0]]).decode("utf-8")
+        except CalledProcessError:
+            print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: syncing {PKGLIST[i][2]} failed")
+            exit(1)
         
         if fexists == False:
             plist.write(str(downloaded_version))
