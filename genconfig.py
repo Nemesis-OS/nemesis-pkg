@@ -1,7 +1,7 @@
+'''
+genconfig-npkg: a tool to generate nemesis-pkg config
+'''
 #!/usr/bin/python3
-#=====================================================
-#genconfig-npkg: a tool to generate nemesis-pkg config|
-#=====================================================
 import sys
 from subprocess import check_output
 from shutil import copy
@@ -59,9 +59,11 @@ try:
          "security-updates",
          "https://raw.githubusercontent.com/Nemesis-OS/packages-security/main/"]
         ]
-        enable_community = input(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: shall we enable community repo[y/n] ")
+        enable_community = input(f"{ANSI_CODES[3]}input{ANSI_CODES[4]}: enable ncr repo?[y/n] ")
         if enable_community in ("y", "Y"):
-            REPOS.append(["https://raw.githubusercontent.com/Nemesis-OS/packages-community/main/community.PKGLIST",
+            REPOS.append(
+                [
+                    "https://raw.githubusercontent.com/Nemesis-OS/packages-community/main/community.PKGLIST",  # pylint: disable=line-too-long
                           "community.PKGLIST",
                           "community",
                           "https://raw.githubusercontent.com/Nemesis-OS/packages-community/main/"])
@@ -74,5 +76,5 @@ try:
     cfg_file.close()
     print(f"{ANSI_CODES[1]}sucess{ANSI_CODES[4]}: config generated sucessfully")
 except KeyboardInterrupt:
-    print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: user pressed ctrl-c so exiting. ")
+    print(f" {ANSI_CODES[0]}error{ANSI_CODES[4]}: user pressed ctrl-c so exiting. ")
     sys.exit(1)
