@@ -4,8 +4,8 @@ from os.path import isfile
 from sys import argv, path, exit
 from subprocess import check_output, CalledProcessError
 from time import strftime
-from tomllib import loads, TOMLDecodeError
 from json import loads, dumps
+from json.decoder import JSONDecodeError
 from ast import literal_eval
 
 disable_check_important_files = False
@@ -15,8 +15,8 @@ REPOLIST = []
 CPU_FLAGS = []
 
 def check_user_is_root():
-    cuser = check_output('whoami')
-    if cuser == b'root\n':
+    user = check_output('whoami')
+    if user == b'root\n':
         return bool(True)
     else:
         return bool(False)
@@ -167,8 +167,8 @@ def install_packages(pname: str):
     pkg_in_repo = False
     pkg_in_w_repo = False
     reinstall_mode = False
-    
-    if return_if_pkg_exist(pname) is None:
+
+    if return_if_pkg_exist(pname) == False:
         pass
     else:
         reinstall_yn = input(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: {ANSI_CODES[2]}{pname}{ANSI_CODES[4]} is installed.. do you wanna reinstall[{ANSI_CODES[1]}y{ANSI_CODES[4]}/{ANSI_CODES[0]}n{ANSI_CODES[4]}] ")
@@ -232,13 +232,13 @@ def install_packages(pname: str):
     else:
         pass
 
-    print(f"{ANSI_CODES[3]}info{ANSI_CODES[4]}: downloading build.toml")
+    print(f"{ANSI_CODES[3]}info{ANSI_CODES[4]}: downloading build.json")
     try:
         build_contents = check_output(['curl' , curl]).decode('utf-8')
     except CalledProcessError:
         print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: {ANSI_CODES[2]}build.toml{ANSI_CODES[4]} failed to download")
         exit(1)
-
+    
     try:
         if loads(build_contents)['core']['cpu_flags'] == []:
             pass
@@ -271,21 +271,30 @@ def install_packages(pname: str):
             write_log(f"{ctime} PASS {pname} installed sucesfully")
             print(f"{ANSI_CODES[1]}sucess{ANSI_CODES[4]}: {loads(build_contents)['core']['name']} installed sucessfully")
             if isfile("/etc/nemesis-pkg/installed-packages.PKGLIST") == True:
-                installed_pkgs = open("/etc/nemesis-pkg/installed-packages.PKGLIST" , 'a+')
-                installed_pkgs.seek(0)
-                installed_pkgs.write(loads(build_contents)['core']['name']+" "+loads(build_contents)['core']['version']+" "+str(loads(build_contents)['core']['depends'])+" "+str(loads(build_contents)['build']['files'])+"\n")
-                installed_pkgs.truncate()
+                with open("/etc/nemesis-pkg/installed-packages.PKGLIST" , 'r+', encoding="utf-8") as installed_pkgs:
+                    pkg_hmap = loads(installed_pkgs.read())
+                    if pname in list(pkg_hmap.keys()):
+                        pkg_hmap[f'{pname}'] = {"version": loads(build_contents)['core']['version'], "file_list": loads(build_contents)['build']['files']}
+                        installed_pkgs.seek(0)
+                        installed_pkgs.write(dumps(pkg_hmap))
+                        installed_pkgs.truncate()
+                    else:
+                        pkg_hmap[f'{pname}'] = {"version": loads(build_contents)['core']['version'], "file_list": loads(build_contents)['build']['files']}
+                        installed_pkgs.seek(0)
+                        installed_pkgs.write(dumps(pkg_hmap))
+                        installed_pkgs.truncate()
                 installed_pkgs.close()
             else:
-                installed_pkgs = open("/etc/nemesis-pkg/installed-packages.PKGLIST" , 'w', encoding="utf-8")
-                installed_pkgs.write(loads(build_contents)['core']['name']+" "+loads(build_contents)['core']['version']+" "+str(loads(build_contents)['core']['depends'])+" "+str(loads(build_contents)['build']['files'])+"\n")
+                with open("/etc/nemesis-pkg/installed-packages.PKGLIST" , 'w', encoding="utf-8") as installed_pkgs:
+                    ipkg_hmap = {f"{pname}": {"version": loads(build_contents)['core']['version'], "file_list": loads(build_contents)['build']['files']}} 
+                    installed_pkgs.write(dumps(ipkg_hmap))
                 installed_pkgs.close()
         else:
             ctime = strftime("%D %H:%M:%S")
             write_log(f"{ctime} ERROR {pname} failed to install")
             print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: {loads(build_contents)['core']['name']} installed unsucessfully")
-                
-    except (TOMLDecodeError, KeyError):
+            exit(1)
+    except (KeyError):
         ctime = strftime("%D %H:%M:%S")
         write_log(f"{ctime} ERROR {pname} failed to install")
         print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: either this package is missing or the build file is corrupt... please open a bug report to the NemesisOS Developers regarding this issue.")
@@ -293,16 +302,13 @@ def install_packages(pname: str):
 def list_installed():
     print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: this is the list of all installed packages")
     try:
-        ipkglist_open = open("/etc/nemesis-pkg/installed-packages.PKGLIST" , 'r', encoding="utf-8")
-        a = []
-        for installed_pkgs in ipkglist_open.read().splitlines():
-            a.append(installed_pkgs.split()[0]+f" {ANSI_CODES[1]}{installed_pkgs.split()[1]}{ANSI_CODES[4]}")
-
-        a.sort()
-        for installed_pkgs in a:
-            print(installed_pkgs)
+        with open("/etc/nemesis-pkg/installed-packages.PKGLIST" , 'r', encoding="utf-8") as ipkglist_open:
+            a = list(loads(ipkglist_open.read()).keys())
+            a.sort()
+            for installed_pkgs in a:
+                print(installed_pkgs)
             
-        ipkglist_open.close()
+            ipkglist_open.close()
     except Exception:
         print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: something went wrong")
 
@@ -426,21 +432,22 @@ def uninstall_multiple(plist: list[str]):
 
 def return_if_pkg_exist(query: str):
     try:
-        pkglist = open("/etc/nemesis-pkg/installed-packages.PKGLIST" , 'r')
-        for i in pkglist.read().splitlines():
-            if i.split()[0] == query:
+        with open("/etc/nemesis-pkg/installed-packages.PKGLIST" , 'r') as pkglist:
+            a = list(loads(pkglist.read()).keys())
+            if query in a:
                 pkglist.close()
                 return True
             else:
-                continue
-
-            pkglist.close()
+                pkglist.close()
+                return False
+        
     except (FileNotFoundError, IndexError):
         print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: {ANSI_CODES[2]}/etc/nemesis-pkg/installed-packages.PKGLIST{ANSI_CODES[4]} might be corrupt.. ")
 
 def search_package(query: str):
     print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: looking for pkgs matching to {ANSI_CODES[2]}{query}{ANSI_CODES[4]}")
     arr = []
+    chdir("/etc/nemesis-pkg")
     for repo_files in REPOLIST:
         file = open(repo_files[1], 'r', encoding="utf-8")
         for pkg in file.read().splitlines():
