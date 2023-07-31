@@ -509,23 +509,34 @@ if __name__ == "__main__":
                 install_packages(argv[2])
             else:
                 a = []
-                for i in range(2, len(argv)):a.append(argv[i])
+                for i in range(2, len(argv)):
+                    a.append(argv[i])
                 install_multiple_packages(a)
         elif len(argv) >= 2 and argv[1] == "uninstall":
             if len(argv) == 3:
                 uninstall_package(argv[2])
             else:
                 a = []
-                for i in range(2 , len(argv)):
+                for i in range(2, len(argv)):
                     a.append(argv[i])
                 uninstall_multiple(a)
-        elif len(argv) >=2 and argv[1] in ("s", "search"):
+        elif len(argv) >= 2 and argv[1] in ("s", "search"):
             search_package(argv[2])
+        elif len(argv) == 2 and argv[1] in ("h", "help"):
+            print('''nemesis-pkg help:
+===================
+[h]elp - Show this page
+[i]nstall - Install a package
+[l]og - View nemesis-pkg log
+[r]emove - Remove a package
+[s]earch - Search packages present
+[S]ync - Sync package database
+[u]pgrade - Upgrade packages''')
         else:
             print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: invalid operation")
 
     except IndexError:
         print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: no operation specified")
     except KeyboardInterrupt:
-        print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: user pressed CTRL+C so exiting")
+        print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: ctrl-c detection..")
         exit(1)
