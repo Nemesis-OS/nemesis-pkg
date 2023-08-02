@@ -1,0 +1,9 @@
+{
+    "VERIFIED_REPOS": [
+	"NEMESIS_DYLAN": {
+	    "DESC": "This repository adds programs of Dylan Araps to the official repository",
+	    "COMMAND_TO_ADD": ["https://raw.githubusercontent.com/abrik1/dylan-nemesis-repo/main/dylan-nemesis-repo.PKGLIST", "dylan.PKGLIST", "dylan", "https://raw.githubusercontent.com/abrik1/dylan-nemesis-repo/main/"],
+	    "MAINTAINER": "abrik1"
+	}
+    ]
+}
