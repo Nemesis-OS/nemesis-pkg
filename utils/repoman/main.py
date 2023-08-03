@@ -17,7 +17,15 @@ def sync_verified_repos():
     this function determines the list of verified repos
     '''
     if isfile("/etc/nemesis-pkg/verified_repos.json") is True:
-        pass
+        db = check_output(['curl', 'https://raw.githubusercontent.com/Nemesis-OS/nemesis-pkg/main/utils/repoman/repos.json', '-s']).decode('utf-8')
+        with open("/etc/nemesis-pkg/verified_repos.json", 'r+', encoding="utf-8") as repo_cfg:
+            if repo_cfg.read() == db:
+                repo_cfg.close()
+            else:
+                repo_cfg.seek(0)
+                repo_cfg.write(str(db))
+                repo_cfg.truncate()
+                repo_cfg.close()
     else:
         print("{}info{}: fetching list of verified repos".format(t_col[2], t_col[3]))
         db = check_output(['curl', 'https://raw.githubusercontent.com/Nemesis-OS/nemesis-pkg/main/utils/repoman/repos.json']).decode('utf-8')
