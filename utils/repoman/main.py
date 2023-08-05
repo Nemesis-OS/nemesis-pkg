@@ -14,81 +14,88 @@ t_col = ["\x1b[31m",
          "\x1b[34m",
          "\x1b[0m"]
 
-vrepos = []
-repos = []
-config = None
-repo_count = 1
+CONFIG = None
 
 def sync_verified_repos():
     '''
     this function determines the list of verified repos
     '''
     if isfile("/etc/nemesis-pkg/verified_repos.json") is True:
-        db = check_output(['curl', 'https://raw.githubusercontent.com/Nemesis-OS/nemesis-pkg/main/utils/repoman/repos.json', '-s']).decode('utf-8')
+        vdb = check_output(['curl', 'https://raw.githubusercontent.com/Nemesis-OS/nemesis-pkg/main/utils/repoman/repos.json', '-s']).decode('utf-8') # pylint: disable=line-too-long
         with open("/etc/nemesis-pkg/verified_repos.json", 'r+', encoding="utf-8") as repo_cfg:
-            if repo_cfg.read() == db:
+            if repo_cfg.read() == vdb:
                 repo_cfg.close()
             else:
                 repo_cfg.seek(0)
-                repo_cfg.write(str(db))
+                repo_cfg.write(str(vdb))
                 repo_cfg.truncate()
                 repo_cfg.close()
     else:
-        print("{}info{}: fetching list of verified repos".format(t_col[2], t_col[3]))
-        db = check_output(['curl', 'https://raw.githubusercontent.com/Nemesis-OS/nemesis-pkg/main/utils/repoman/repos.json']).decode('utf-8')
+        print(f"{t_col[2]}info{t_col[3]}: fetching list of verified repos")
+        vdb = check_output(['curl', 'https://raw.githubusercontent.com/Nemesis-OS/nemesis-pkg/main/utils/repoman/repos.json']).decode('utf-8') # pylint: disable=line-too-long
         with open("/etc/nemesis-pkg/verified_repos.json", 'w', encoding="utf-8") as repo_db:
-            repo_db.write(db)
+            repo_db.write(vdb)
         repo_db.close()
 
 def parse_db():
-    global vrepos, repos
     '''
     this function parses database...
     '''
     with open('/etc/nemesis-pkg/verified_repos.json', 'r', encoding="utf-8") as vrdb:
-        vrepos = loads(vrdb.read())
+        vrepo = loads(vrdb.read())
+        vrdb.close()
 
-    repos = list(vrepos.keys())
+    repo = list(vrepos.keys())
+
+    return [vrepo, repo]
 
 def view_info():
+    '''
+    the main function used for viewing info
+    '''
+    counter = 1
     for i in repos:
-        print("{}{}{}: {}{}{}".format(t_col[1], repo_count, t_col[3], t_col[2], vrepos[i]['ID'], t_col[3]))
-        print("\t{}Description{}: {}".format(t_col[2], t_col[3], vrepos[i]['DESC']))
-        print("\t{}Source{}: {}".format(t_col[2], t_col[3], vrepos[i]['COMMAND_TO_ADD'][3]))
+        print(f"{t_col[2]}{counter}{t_col[3]}: {vrepos[i]['ID']}:")
+        print(f"\t{t_col[2]}Description{t_col[3]}: {vrepos[i]['DESC']}")
+        print(f"\t{t_col[2]}Source{t_col[3]}: {vrepos[i]['COMMAND_TO_ADD']}")
+        counter = counter+1
 
 if __name__ == "__main__":
     if getuid() == 0:
         pass
     else:
-        print("{}error{}: please run this as root".format(t_col[0], t_col[3]))
+        print(f"{t_col[0]}error{t_col[3]}: please run this as root")
         sys.exit(1)
 
     sync_verified_repos()
     parse_db()
-
     try:
         if sys.argv[1] == "v" or sys.argv[1] == "view":
+            sync_verified_repos()
+            out = parse_db()
+            vrepos = out[0]
+            repos = out[1]
             view_info()
         elif len(sys.argv) == 2 and sys.argv[1] == "a" or sys.argv[1] == "add":
-            print("{}error{}: parameter REPO_ID not found".format(t_col[0], t_col[3]))
+            print(f"{t_col[0]}error{t_col[3]}: parameter REPO_ID not found")
             sys.exit(1)
         elif len(sys.argv) == 3 and sys.argv[1] == "a" or sys.argv[1] == "add":
             if sys.argv[2] in repos:
                 with open("/etc/nemesis-pkg/config.json" , 'r+', encoding='utf-8') as npkg_config:
-                    config = loads(npkg_config.read())
-                    if vrepos[sys.argv[2]]['COMMAND_TO_ADD'] in config['REPOS']:
-                        print("{}note{}: repo {} already added".format(t_col[2], t_col[3], sys.argv[2]))
+                    CONFIG = loads(npkg_config.read())
+                    if vrepos[sys.argv[2]]['COMMAND_TO_ADD'] in CONFIG['REPOS']:
+                        print(f"{t_col[2]}note{t_col[3]}: repo {sys.argv[2]} already added")
                         npkg_config.close()
                     else:
-                        print("{}note{}: adding {} repo".format(t_col[2], t_col[3], sys.argv[2]))
-                        config['REPOS'].append(vrepos[sys.argv[2]]['COMMAND_TO_ADD'])
+                        print(f"{t_col[2]}note{t_col[3]}: adding {sys.argv[2]} repo")
+                        CONFIG['REPOS'].append(vrepos[sys.argv[2]]['COMMAND_TO_ADD'])
                         npkg_config.seek(0)
-                        npkg_config.write(dumps(config))
+                        npkg_config.write(dumps(CONFIG))
                         npkg_config.truncate()
                         npkg_config.close()
-                        print("{}sucess{}: enabled {} repo".format(t_col[1], t_col[3], sys.argv[2]))
+                        print(f"{t_col[1]}sucess{t_col[3]}: enabled {sys.argv[2]} repo")
             else:
-                print("{}error{}: repo id {} unverified..".format(t_col[0], t_col[3], sys.argv[2]))
+                print(f"{t_col[0]}error{t_col[3]}: repo id {sys.argv[2]} unverified..")
         else:
             print('''nemesis-pkg-rpoman: a tool to manage repos
 ==========================================
