@@ -6,7 +6,7 @@ import sys
 from os import getuid
 from os.path import isfile
 from subprocess import check_output
-from json import loads
+from json import loads, dumps
 
 
 t_col = ["\x1b[31m",
@@ -16,6 +16,7 @@ t_col = ["\x1b[31m",
 
 vrepos = []
 repos = []
+config = None
 repo_count = 1
 
 def sync_verified_repos():
@@ -54,7 +55,7 @@ def view_info():
         print("{}{}{}: {}{}{}".format(t_col[1], repo_count, t_col[3], t_col[2], vrepos[i]['ID'], t_col[3]))
         print("\t{}Description{}: {}".format(t_col[2], t_col[3], vrepos[i]['DESC']))
         print("\t{}Source{}: {}".format(t_col[2], t_col[3], vrepos[i]['COMMAND_TO_ADD'][3]))
-        
+
 if __name__ == "__main__":
     if getuid() == 0:
         pass
@@ -65,9 +66,36 @@ if __name__ == "__main__":
     sync_verified_repos()
     parse_db()
 
-    if sys.argv[1] == "v" or sys.argv[1] == "view":
-        view_info()
-    else:
+    try:
+        if sys.argv[1] == "v" or sys.argv[1] == "view":
+            view_info()
+        elif len(sys.argv) == 2 and sys.argv[1] == "a" or sys.argv[1] == "add":
+            print("{}error{}: parameter REPO_ID not found".format(t_col[0], t_col[3]))
+            sys.exit(1)
+        elif len(sys.argv) == 3 and sys.argv[1] == "a" or sys.argv[1] == "add":
+            if sys.argv[2] in repos:
+                with open("/etc/nemesis-pkg/config.json" , 'r+', encoding='utf-8') as npkg_config:
+                    config = loads(npkg_config.read())
+                    if vrepos[sys.argv[2]]['COMMAND_TO_ADD'] in config['REPOS']:
+                        print("{}note{}: repo {} already added".format(t_col[2], t_col[3], sys.argv[2]))
+                        npkg_config.close()
+                    else:
+                        print("{}note{}: adding {} repo".format(t_col[2], t_col[3], sys.argv[2]))
+                        config['REPOS'].append(vrepos[sys.argv[2]]['COMMAND_TO_ADD'])
+                        npkg_config.seek(0)
+                        npkg_config.write(dumps(config))
+                        npkg_config.truncate()
+                        npkg_config.close()
+                        print("{}sucess{}: enabled {} repo".format(t_col[1], t_col[3], sys.argv[2]))
+            else:
+                print("{}error{}: repo id {} unverified..".format(t_col[0], t_col[3], sys.argv[2]))
+        else:
+            print('''nemesis-pkg-rpoman: a tool to manage repos
+==========================================
+[a]dd: add repository
+[h]elp: show this page
+[v]iew: view verified repos''')
+    except IndexError:
         print('''nemesis-pkg-rpoman: a tool to manage repos
 ==========================================
 [a]dd: add repository
