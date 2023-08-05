@@ -8,7 +8,6 @@ from os.path import isfile
 from subprocess import check_output
 from json import loads, dumps
 
-
 t_col = ["\x1b[31m",
          "\x1b[32m",
          "\x1b[34m",
