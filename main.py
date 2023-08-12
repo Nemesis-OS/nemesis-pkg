@@ -6,7 +6,6 @@ from subprocess import check_output, CalledProcessError
 from time import strftime
 from json import loads, dumps
 from json.decoder import JSONDecodeError
-from ast import literal_eval
 
 disable_check_important_files = False
 preserve_build_files = False
@@ -390,8 +389,7 @@ def uninstall_new(query: str):
 
 def uninstall_multiple(plist: list[str]):
     for i in plist:
-        print(f"{ANSI_CODES[2]}note{ANSI_CODES[4]}: removing {i}")
-        uninstall_package(i)
+        uninstall_new(i)
 
 def return_if_pkg_exist(query: str):
     try:
