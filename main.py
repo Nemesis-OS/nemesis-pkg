@@ -439,8 +439,7 @@ def return_if_pkg_exist(query: str):
                 return True
             else:
                 pkglist.close()
-                return False
-        
+                return False        
     except (FileNotFoundError, IndexError):
         print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: {ANSI_CODES[2]}/etc/nemesis-pkg/installed-packages.PKGLIST{ANSI_CODES[4]} might be corrupt.. ")
 
@@ -466,11 +465,14 @@ def search_package(query: str):
         file.close()
         
     arr.sort()
-    for matching in arr:
-        if return_if_pkg_exist(matching) == True:
-            print(f"{matching}{ANSI_CODES[1]}[installed]{ANSI_CODES[4]}")
-        else:
-            print(matching)
+    if arr != []:
+        for matching in arr:
+            if return_if_pkg_exist(matching) == True:
+                print(f"{matching}{ANSI_CODES[1]}[installed]{ANSI_CODES[4]}")
+            else:
+                print(matching)
+    else:
+        print(f"{ANSI_CODES[2]}warning{ANSI_CODES[4]}: no package similar to {query}")
         
 VERSION = 0.1
 BUILD_ID = "-rc1"
@@ -478,9 +480,9 @@ BUILD_ID = "-rc1"
 if __name__ == "__main__":
     parse_config_file()
     try:
-        if len(argv) >= 2 and argv[1] == "sync":
+        if len(argv) >= 2 and argv[1] in ("S", "sync"):
             sync_packages(REPOLIST)
-        elif len(argv) >= 2 and argv[1] == "version" or argv[1] == "-v":
+        elif len(argv) >= 2 and argv[1] in ("v", "version"):
             print(f"nemesis-pkg build {VERSION}{BUILD_ID}")
         elif len(argv) >= 2 and argv[1] == "log":
             if len(argv) == 2:
@@ -491,7 +493,7 @@ if __name__ == "__main__":
                 remove_log()
             else:
                 print("log: this allows you to view/delete logs\n========================================\nview: this allows you to view logfile\ndelete: this allows you to delete logfile")
-        elif len(argv) >= 2 and argv[1] == "list":
+        elif len(argv) >= 2 and argv[1] in ("l", "list"):
             if len(argv) == 3 and argv[2] == "installed":
                 list_installed()
             elif len(argv) == 3 and argv[2] == "repos":
@@ -504,7 +506,7 @@ if __name__ == "__main__":
                 list_pkgs_from_repo(argv[2])
             else:
                 list_packages()
-        elif len(argv) >=2 and argv[1] == "install":
+        elif len(argv) >=2 and argv[1] in ("i", "install"):
             if len(argv) == 3:
                 install_packages(argv[2])
             else:
@@ -512,7 +514,7 @@ if __name__ == "__main__":
                 for i in range(2, len(argv)):
                     a.append(argv[i])
                 install_multiple_packages(a)
-        elif len(argv) >= 2 and argv[1] == "uninstall":
+        elif len(argv) >= 2 and argv[1] in ("u", "uninstall"):
             if len(argv) == 3:
                 uninstall_package(argv[2])
             else:
