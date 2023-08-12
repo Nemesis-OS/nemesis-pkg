@@ -357,16 +357,16 @@ def uninstall_package(pname: str):
     pfound = False
     dlist = []
     pkg_flist = ""
-    for i in installed_packages_db:
-        if i == "":
-            continue
-        elif pname == i.split()[0]:
-            pfound = True
-            pkg_flist = i.split()[3]
-        elif pname in literal_eval(i.split()[2]):
-            dlist.append(i.split()[0])
-        else:
-            continue
+    #for i in installed_packages_db:
+        #if i == "":
+            #continue
+        #elif pname == i.split()[0]:
+            #pfound = True
+            #pkg_flist = i.split()[3]
+        #elif pname in literal_eval(i.split()[2]):
+            #dlist.append(i.split()[0])
+        #else:
+            #continue
 
     if pfound == True and dlist == []:
         print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: removing {pname}")
@@ -424,6 +424,32 @@ def uninstall_package(pname: str):
     installed_pkgs.truncate()
     installed_pkgs.close()
     installed_pkg_bak.close()
+
+def uninstall_new(query: str):
+    if return_if_pkg_exist(query=query) == True:
+        pass
+    else:
+        print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: {query} not installed")
+        exit(1)
+
+    print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: removing {query}")
+    installed_database = None
+    ipkgl =  open("/etc/nemesis-pkg/installed-packages.PKGLIST", 'r+', encoding="utf-8")
+    installed_database = loads(ipkgl.read())
+        
+    for i in installed_database[query]["file_list"]:
+        if system(f"rm -rf {i}") == 0:
+            continue
+        else:
+            print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: {query} failed to uninstall")
+            exit(1)
+
+    installed_database.pop(query)
+    ipkgl.seek(0)
+    ipkgl.write(dumps(installed_database))
+    ipkgl.truncate()
+    ipkgl.close()
+    print(f"{ANSI_CODES[1]}sucess{ANSI_CODES[4]}: {query} uninstalled")
 
 def uninstall_multiple(plist: list[str]):
     for i in plist:
@@ -516,7 +542,7 @@ if __name__ == "__main__":
                 install_multiple_packages(a)
         elif len(argv) >= 2 and argv[1] in ("u", "uninstall"):
             if len(argv) == 3:
-                uninstall_package(argv[2])
+                uninstall_new(argv[2])
             else:
                 a = []
                 for i in range(2, len(argv)):
