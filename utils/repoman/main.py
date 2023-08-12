@@ -44,7 +44,7 @@ def parse_db():
         vrepo = loads(vrdb.read())
         vrdb.close()
 
-    repo = list(vrepos.keys())
+    repo = list(vrepo.keys())
 
     return [vrepo, repo]
 
@@ -67,13 +67,12 @@ if __name__ == "__main__":
         sys.exit(1)
 
     sync_verified_repos()
+    vrepos = parse_db()[0]
+    repos = parse_db()[1]
     parse_db()
     try:
         if sys.argv[1] == "v" or sys.argv[1] == "view":
             sync_verified_repos()
-            out = parse_db()
-            vrepos = out[0]
-            repos = out[1]
             view_info()
         elif len(sys.argv) == 2 and sys.argv[1] == "a" or sys.argv[1] == "add":
             print(f"{t_col[0]}error{t_col[3]}: parameter REPO_ID not found")
