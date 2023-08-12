@@ -274,20 +274,20 @@ def install_packages(pname: str):
                 with open("/etc/nemesis-pkg/installed-packages.PKGLIST" , 'r+', encoding="utf-8") as installed_pkgs:
                     pkg_hmap = loads(installed_pkgs.read())
                     if pname in list(pkg_hmap.keys()):
-                        pkg_hmap[f'{pname}'] = {"version": loads(build_contents)['core']['version'], "file_list": loads(build_contents)['build']['files']}
+
                         installed_pkgs.seek(0)
                         installed_pkgs.write(dumps(pkg_hmap))
                         installed_pkgs.truncate()
                     else:
-                        pkg_hmap[f'{pname}'] = {"version": loads(build_contents)['core']['version'], "file_list": loads(build_contents)['build']['files']}
+                        pkg_hmap[f'{pname}'] = {"version": loads(build_contents)['core']['version'], "file_list": loads(build_contents)['build']['files'], "dependencies": loads(build_contents)['core']['depends']}
                         installed_pkgs.seek(0)
                         installed_pkgs.write(dumps(pkg_hmap))
                         installed_pkgs.truncate()
                 installed_pkgs.close()
             else:
                 with open("/etc/nemesis-pkg/installed-packages.PKGLIST" , 'w', encoding="utf-8") as installed_pkgs:
-                    ipkg_hmap = {f"{pname}": {"version": loads(build_contents)['core']['version'], "file_list": loads(build_contents)['build']['files']}} 
-                    installed_pkgs.write(dumps(ipkg_hmap))
+                    pkg_hmap[f'{pname}'] = {"version": loads(build_contents)['core']['version'], "file_list": loads(build_contents)['build']['files'], "dependencies": loads(build_contents)['core']['depends']}
+                    installed_pkgs.write(dumps(pkg_hmap))
                 installed_pkgs.close()
         else:
             ctime = strftime("%D %H:%M:%S")
@@ -337,95 +337,13 @@ def list_pkgs_from_repo(rname: str):
         for i in rpofile_open.read().splitlines():
             print(i.split()[0], f"{ANSI_CODES[2]}{i.split()[1]}{ANSI_CODES[4]}")
 
-def uninstall_package(pname: str):
+def uninstall_new(query: str):
     if check_user_is_root() == True:
         pass
     else:
         print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: user is not root")
         exit(0)
-        
-    print(f"{ANSI_CODES[3]}info{ANSI_CODES[4]}: checking if {pname} is a valid package")
-    try:
-        system("cp /etc/nemesis-pkg/installed-packages.PKGLIST /etc/nemesis-pkg/installed-packages.PKGLIST.bak")
-        installed_pkgs = open("/etc/nemesis-pkg/installed-packages.PKGLIST" , 'r+')
-        pass
-    except FileNotFoundError:
-        print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: the database storing the list of installed packages is not found")
-        exit(1)
 
-    installed_packages_db = installed_pkgs.read().splitlines()
-    pfound = False
-    dlist = []
-    pkg_flist = ""
-    #for i in installed_packages_db:
-        #if i == "":
-            #continue
-        #elif pname == i.split()[0]:
-            #pfound = True
-            #pkg_flist = i.split()[3]
-        #elif pname in literal_eval(i.split()[2]):
-            #dlist.append(i.split()[0])
-        #else:
-            #continue
-
-    if pfound == True and dlist == []:
-        print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: removing {pname}")
-        pass
-    elif dlist != []:
-        print(f"{ANSI_CODES[2]}warning{ANSI_CODES[4]}: removing {pname} will remove the following packages:")
-        for i in dlist:
-            print(i)
-        input_yn = input(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: removing {pname} will remove these packages... do you want to remove them?[{ANSI_CODES[1]}y{ANSI_CODES[4]}/{ANSI_CODES[0]}n{ANSI_CODES[4]}] ")
-        if input_yn in ("n", "N"):
-            installed_pkgs.close()
-            print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: {pname} not removed")
-            exit()
-        else:
-            for i in dlist:
-                print(f"{ANSI_CODES[2]}info{ANSI_CODES[4]}: uninstalling {i}")
-                uninstall_package(i)
-    else:
-        installed_pkgs.close()
-        print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: {pname} not installed")
-        exit(1)
-
-    pkg_flist = literal_eval(pkg_flist)
-    for filelist in pkg_flist:
-        print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: removing {i} from filesystem..")
-        if i[len(i)-1] != "/":
-            if system(f"rm {i}") == 0:
-                continue
-            else:
-                installed_pkgs.close()
-                print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: {pname} not uninstalled")
-                break
-        else:
-            if system(f"rm -rf {i}") == 0:
-                continue
-            else:
-                installed_pkgs.close()
-                print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: {pname} not uninstalled")
-                break
-
-    print(f"{ANSI_CODES[1]}sucess{ANSI_CODES[4]}: {pname} uninstalled..")
-
-    installed_pkg_bak = open("/etc/nemesis-pkg/installed-packages.PKGLIST.bak", 'r')
-    ipkglist = ""
-    for i in installed_pkg_bak.read().splitlines():
-        if i == '':
-            continue
-        elif i.split()[0] == pname:
-            continue
-        else:
-            ipkglist=ipkglist+f"{i}\n"
-            
-    installed_pkgs.seek(0)
-    installed_pkgs.write(ipkglist)
-    installed_pkgs.truncate()
-    installed_pkgs.close()
-    installed_pkg_bak.close()
-
-def uninstall_new(query: str):
     if return_if_pkg_exist(query=query) == True:
         pass
     else:
@@ -436,20 +354,39 @@ def uninstall_new(query: str):
     installed_database = None
     ipkgl =  open("/etc/nemesis-pkg/installed-packages.PKGLIST", 'r+', encoding="utf-8")
     installed_database = loads(ipkgl.read())
-        
-    for i in installed_database[query]["file_list"]:
-        if system(f"rm -rf {i}") == 0:
-            continue
-        else:
-            print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: {query} failed to uninstall")
-            exit(1)
+    pkg_depending_in_query = []
 
-    installed_database.pop(query)
-    ipkgl.seek(0)
-    ipkgl.write(dumps(installed_database))
-    ipkgl.truncate()
-    ipkgl.close()
-    print(f"{ANSI_CODES[1]}sucess{ANSI_CODES[4]}: {query} uninstalled")
+    for i in list(installed_database.keys()):
+        if query in installed_database[i]['dependencies']:
+            pkg_depending_in_query.append(i)
+        else:
+            continue
+    if pkg_depending_in_query == []:
+        for i in installed_database[query]["file_list"]:
+            if system(f"rm -rf {i}") == 0:
+                continue
+            else:
+                print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: {query} failed to uninstall")
+                exit(1)
+
+        installed_database.pop(query)
+        ipkgl.seek(0)
+        ipkgl.write(dumps(installed_database))
+        ipkgl.truncate()
+        ipkgl.close()
+        print(f"{ANSI_CODES[1]}sucess{ANSI_CODES[4]}: {query} uninstalled")
+    else:
+        for i in pkg_depending_in_query:
+            print(i)
+
+        inp = input(f"{ANSI_CODES[2]}warning{ANSI_CODES[4]}: these packages will be removed[y/N]? ")
+        if inp == "y" or inp == "Y":
+            for i in pkg_depending_in_query:
+                uninstall_new(i)
+            uninstall_new(query=query)
+        else:
+            print(f"{ANSI_CODES[2]}note{ANSI_CODES[4]}: operation cancelled")
+            exit(1)
 
 def uninstall_multiple(plist: list[str]):
     for i in plist:
