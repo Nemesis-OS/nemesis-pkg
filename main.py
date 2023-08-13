@@ -155,7 +155,7 @@ def install_multiple_packages(pkglist: list[str]):
         
     for i in pkglist:
         install_packages(i)
-  
+
 def install_packages(pname: str):
     if check_user_is_root() is True:
         pass
@@ -272,16 +272,11 @@ def install_packages(pname: str):
             if isfile("/etc/nemesis-pkg/installed-packages.PKGLIST") == True:
                 with open("/etc/nemesis-pkg/installed-packages.PKGLIST" , 'r+', encoding="utf-8") as installed_pkgs:
                     pkg_hmap = loads(installed_pkgs.read())
-                    if pname in list(pkg_hmap.keys()):
-
-                        installed_pkgs.seek(0)
-                        installed_pkgs.write(dumps(pkg_hmap))
-                        installed_pkgs.truncate()
-                    else:
-                        pkg_hmap[f'{pname}'] = {"version": loads(build_contents)['core']['version'], "file_list": loads(build_contents)['build']['files'], "dependencies": loads(build_contents)['core']['depends']}
-                        installed_pkgs.seek(0)
-                        installed_pkgs.write(dumps(pkg_hmap))
-                        installed_pkgs.truncate()
+                    pkg_hmap[f'{pname}'] = {"version": loads(build_contents)['core']['version'], "file_list": loads(build_contents)['build']['files'], "dependencies": loads(build_contents)['core']['depends']}
+                    print(pkg_hmap)
+                    installed_pkgs.seek(0)
+                    installed_pkgs.write(dumps(pkg_hmap))
+                    installed_pkgs.truncate()
                 installed_pkgs.close()
             else:
                 with open("/etc/nemesis-pkg/installed-packages.PKGLIST" , 'w', encoding="utf-8") as installed_pkgs:
@@ -491,10 +486,10 @@ if __name__ == "__main__":
 [h]elp - Show this page
 [i]nstall - Install a package
 [l]og - View nemesis-pkg log
-[r]emove - Remove a package
 [s]earch - Search packages present
 [S]ync - Sync package database
-[u]pgrade - Upgrade packages''')
+[u]ninstall - Uninstall a package
+[U]pgrade - Upgrade packages''')
         else:
             print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: invalid operation")
 
