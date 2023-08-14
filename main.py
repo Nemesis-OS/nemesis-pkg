@@ -12,6 +12,7 @@ preserve_build_files = False
 ANSI_CODES = ['\x1b[31m', '\x1b[32m', '\x1b[33m', '\x1b[34m', '\x1b[0m']
 REPOLIST = []
 CPU_FLAGS = []
+on_search_mode = False
 
 def check_user_is_root():
     user = check_output('whoami')
@@ -397,9 +398,14 @@ def return_if_pkg_exist(query: str):
                 pkglist.close()
                 return False        
     except (FileNotFoundError, IndexError):
-        print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: {ANSI_CODES[2]}/etc/nemesis-pkg/installed-packages.PKGLIST{ANSI_CODES[4]} might be corrupt.. ")
+        if on_search_mode == True:
+            pass
+        else:
+            print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: {ANSI_CODES[2]}/etc/nemesis-pkg/installed-packages.PKGLIST{ANSI_CODES[4]} might be corrupt.. ")
 
 def search_package(query: str):
+    global on_search_mode
+    on_search_mode = True
     print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: looking for pkgs matching to {ANSI_CODES[2]}{query}{ANSI_CODES[4]}")
     arr = []
     chdir("/etc/nemesis-pkg")
@@ -429,7 +435,7 @@ def search_package(query: str):
                 print(matching)
     else:
         print(f"{ANSI_CODES[2]}warning{ANSI_CODES[4]}: no package similar to {query}")
-        
+	    
 VERSION = 0.1
 BUILD_ID = "-rc1"
 
