@@ -274,13 +274,13 @@ def install_packages(pname: str):
                 with open("/etc/nemesis-pkg/installed-packages.PKGLIST" , 'r+', encoding="utf-8") as installed_pkgs:
                     pkg_hmap = loads(installed_pkgs.read())
                     pkg_hmap[f'{pname}'] = {"version": loads(build_contents)['core']['version'], "file_list": loads(build_contents)['build']['files'], "dependencies": loads(build_contents)['core']['depends']}
-                    print(pkg_hmap)
                     installed_pkgs.seek(0)
                     installed_pkgs.write(dumps(pkg_hmap))
                     installed_pkgs.truncate()
                 installed_pkgs.close()
             else:
                 with open("/etc/nemesis-pkg/installed-packages.PKGLIST" , 'w', encoding="utf-8") as installed_pkgs:
+                    pkg_hmap = {}
                     pkg_hmap[f'{pname}'] = {"version": loads(build_contents)['core']['version'], "file_list": loads(build_contents)['build']['files'], "dependencies": loads(build_contents)['core']['depends']}
                     installed_pkgs.write(dumps(pkg_hmap))
                 installed_pkgs.close()
@@ -397,11 +397,8 @@ def return_if_pkg_exist(query: str):
             else:
                 pkglist.close()
                 return False        
-    except (FileNotFoundError, IndexError):
-        if on_search_mode == True:
-            pass
-        else:
-            print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: {ANSI_CODES[2]}/etc/nemesis-pkg/installed-packages.PKGLIST{ANSI_CODES[4]} might be corrupt.. ")
+    except (FileNotFoundError, IndexError, JSONDecodeError):
+        return False
 
 def search_package(query: str):
     global on_search_mode
@@ -435,7 +432,7 @@ def search_package(query: str):
                 print(matching)
     else:
         print(f"{ANSI_CODES[2]}warning{ANSI_CODES[4]}: no package similar to {query}")
-	    
+
 VERSION = 0.1
 BUILD_ID = "-rc1"
 
