@@ -164,8 +164,7 @@ def install_packages(pname: str):
         print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: user is not root")
         exit(1)
 
-    pkg_in_repo = False
-    pkg_in_w_repo = False
+    install_source = {}
     reinstall_mode = False
 
     if return_if_pkg_exist(pname) == False:
@@ -210,33 +209,44 @@ def install_packages(pname: str):
     for i in range(0, len(REPOLIST)):
         current_db = open(f"/etc/nemesis-pkg/{REPOLIST[i][1]}", 'r', encoding="utf-8")
         for j in current_db.read().splitlines():
-            if j.split()[0] in pname:
-                pkg_in_repo = True
-                pkg_in_w_repo = REPOLIST[i]
-                curl = f"{REPOLIST[i][3]}{pname}/build"
+            if j.split()[0] in pname:                
+                if REPOLIST[i][2] in list(install_source.keys()):
+                    pass
+                else:
+                    install_source[REPOLIST[i][2]] = REPOLIST[i][3]       
                 current_db.close()
             else:
-                pkg_in_repo = False
                 current_db.close()                
                 continue
 
         current_db.close()
-        if pkg_in_repo is True:
-            continue
-        else:
-            continue
-        
-    if curl == "":
+        continue
+    
+    if install_source == {}:
         print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: {ANSI_CODES[2]}{pname}{ANSI_CODES[4]} is not in any repositories")
         exit(1)
     else:
         pass
 
+    if len(list(install_source.keys())) == 1:
+        curl = install_source[list(install_source.keys())[0]]+pname+"/build"
+        print(curl)
+    else:
+        print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: pkg {pname} found in multiple repos")
+        for i in list(install_source.keys()):
+            print(i)
+        repo_choice = input(f"{ANSI_CODES[3]}input{ANSI_CODES[4]}: {pname} should be installed from which repo? ")
+        if repo_choice not in list(install_source.keys()):
+            print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: repo {repo_choice} not enabled")
+            exit(1)
+        else:
+            curl = install_source[repo_choice]+pname+"/build"
+
     print(f"{ANSI_CODES[3]}info{ANSI_CODES[4]}: downloading build.json")
     try:
         build_contents = check_output(['curl' , curl]).decode('utf-8')
     except CalledProcessError:
-        print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: {ANSI_CODES[2]}build.toml{ANSI_CODES[4]} failed to download")
+        print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: {ANSI_CODES[2]}build.json{ANSI_CODES[4]} failed to download")
         exit(1)
     
     try:
