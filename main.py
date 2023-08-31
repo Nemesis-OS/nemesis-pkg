@@ -29,7 +29,7 @@ def check_user_is_root():
 
 
 def parse_config_file():
-    global disable_check_important_files, ANSI_CODES, REPOLIST, cpu_flags, pbf
+    global disable_check_important_files, ANSI_CODES, REPOLIST, cpu_flags, pbf, npkg_cc, npkg_cxx, npkg_mkopts, npkg_cflags, npkg_cxxflags
     if isfile("/etc/nemesis-pkg/config.json") is True:
         pass
     else:
@@ -53,6 +53,26 @@ def parse_config_file():
     else:
         cpu_flags = config['CPU_FLAGS']
 
+    if "CC" in list(config.keys()):
+        npkg_cc = config["CC"]
+
+    if "CXX" in list(config.keys()):
+        npkg_cxx = config["CXX"]
+
+    if "MAKEOPTS" in list(config.keys()):
+        npkg_mkopts = config["MAKEOPTS"]
+
+    if "CFLAGS" in list(config.keys()):
+        npkg_cflags = config["CFLAGS"]
+
+    if "CXXFLAGS" in list(config.keys()):
+        npkg_cxxflags = config["CXXFLAGS"]
+
+    environ["CC"] = npkg_cc
+    environ["CXX"] = npkg_cxx
+    environ["MAKEOPTS"] = npkg_mkopts
+    environ["CFLAGS"] = npkg_cflags
+    environ["CXXFLAGS"] = npkg_cxxflags
 
 def sync_packages(PKGLIST: list[list[str]]):
     if check_output("whoami") != b'root\n':
