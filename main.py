@@ -18,7 +18,7 @@ ANSI_CODES = ['\x1b[31m', '\x1b[32m', '\x1b[33m', '\x1b[34m', '\x1b[0m']
 REPOLIST = []
 CPU_FLAGS = []
 on_search_mode = False
-
+upgrade_pkg = False
 
 def check_user_is_root():
     user = check_output('whoami')
@@ -194,6 +194,7 @@ def install_packages(pname: str):
         exit(1)
 
     install_source = {}
+    repo_name = ""
 
     if return_if_pkg_exist(pname) == False:
         pass
@@ -257,6 +258,7 @@ def install_packages(pname: str):
         pass
 
     if len(list(install_source.keys())) == 1:
+        repo_name = list(install_source.keys())[0]
         curl = install_source[list(install_source.keys())[0]]+pname+"/build"
     else:
         print(f"=> {ANSI_CODES[3]}note{ANSI_CODES[4]}: pkg {pname} found in multiple repos")
@@ -267,6 +269,7 @@ def install_packages(pname: str):
             print(f"=> {ANSI_CODES[0]}error{ANSI_CODES[4]}: repo {repo_choice} not enabled")
             exit(1)
         else:
+            repo_name = repo_choice
             curl = install_source[repo_choice]+pname+"/build"
 
     print(f"=> {ANSI_CODES[3]}info{ANSI_CODES[4]}: downloading build.json")
@@ -310,7 +313,7 @@ def install_packages(pname: str):
             if isfile("/etc/nemesis-pkg/installed-packages.PKGLIST") == True:
                 with open("/etc/nemesis-pkg/installed-packages.PKGLIST" , 'r+', encoding="utf-8") as installed_pkgs:
                     pkg_hmap = loads(installed_pkgs.read())
-                    pkg_hmap[f'{pname}'] = {"version": loads(build_contents)['core']['version'], "file_list": loads(build_contents)['build']['files'], "dependencies": loads(build_contents)['core']['depends']}
+                    pkg_hmap[f'{pname}'] = {"version": loads(build_contents)['core']['version'], "file_list": loads(build_contents)['build']['files'], "dependencies": loads(build_contents)['core']['depends'], "repo": repo_name}
                     installed_pkgs.seek(0)
                     installed_pkgs.write(dumps(pkg_hmap))
                     installed_pkgs.truncate()
@@ -318,7 +321,7 @@ def install_packages(pname: str):
             else:
                 with open("/etc/nemesis-pkg/installed-packages.PKGLIST" , 'w', encoding="utf-8") as installed_pkgs:
                     pkg_hmap = {}
-                    pkg_hmap[f'{pname}'] = {"version": loads(build_contents)['core']['version'], "file_list": loads(build_contents)['build']['files'], "dependencies": loads(build_contents)['core']['depends']}
+                    pkg_hmap[f'{pname}'] = {"version": loads(build_contents)['core']['version'], "file_list": loads(build_contents)['build']['files'], "dependencies": loads(build_contents)['core']['depends'], "repo": repo_name}
                     installed_pkgs.write(dumps(pkg_hmap))
                 installed_pkgs.close()
         else:
@@ -372,7 +375,7 @@ def list_pkgs_from_repo(rname: str):
 
 
 def uninstall_new(query: str):
-    if check_user_is_root() == True:
+    if check_user_is_root() is True:
         pass
     else:
         print(f"=> {ANSI_CODES[0]}error{ANSI_CODES[4]}: user is not root")
@@ -472,6 +475,50 @@ def search_package(query: str):
     else:
         print(f"=> {ANSI_CODES[2]}warning{ANSI_CODES[4]}: nothing similar to {query}")
 
+def version_to_int(version: str):
+    version = version.split(".")
+    v2 = ""
+    for i in version:
+        v2 = v2+i
+
+    return int(v2)
+
+def upgrade_packeges():
+    global upgrade_pkg
+    pkg_upgrade = False
+    print(f"=> {ANSI_CODES[3]}note{ANSI_CODES[4]}: checking for upgradable packages")
+    upgrade_pkg = False
+    installed_pkgs = open("/etc/nemesis-pkg/installed-packages.PKGLIST", 'r')
+    repo_pkgi = {}
+    repo_pkgiu = {}
+    repo_pkgf = {}
+    upgradable = []
+    for i in range(0, len(REPOLIST)):
+        repo_pkgf[REPOLIST[i][2]] = REPOLIST[i][1]
+        repo_pkgi[REPOLIST[i][2]] = []
+        repo_pkgiu[REPOLIST[i][2]] = []
+
+    test = loads(installed_pkgs.read())
+
+    for i in list(test.keys()):
+        with open(f"/etc/nemesis-pkg/{repo_pkgf[test[i]['repo']]}", 'r') as pkdb:
+            data = pkdb.read().split()
+            if i in data:
+                if version_to_int(data[data.index(i)+1]) > version_to_int(test[i]['version']):
+                    upgradable.append(i)
+                    print(f"=> {i} {ANSI_CODES[0]}{test[i]['version']}{ANSI_CODES[4]} -> {ANSI_CODES[1]}{data[data.index(i)+1]}{ANSI_CODES[4]}")
+                    pkg_upgrade = True
+            else:
+                continue
+
+        pkdb.close()
+
+    if pkg_upgrade == False:
+        print(f"=> {ANSI_CODES[3]}note{ANSI_CODES[4]}: system upto date")
+    else:
+        pass
+
+
 VERSION = 0.1
 BUILD_ID = "-rc1"
 
@@ -544,11 +591,13 @@ default: shows the list of all packages in every repo''')
 [S]ync - Sync package database
 [u]ninstall - Uninstall a package
 [U]pgrade - Upgrade packages''')
+        elif len(argv) == 2 and argv[1] in ("U", "upgrade", "Upgrade"):
+            upgrade_packeges()
         else:
             print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: invalid operation")
 
     except IndexError:
-        print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: no operation specified")
+        print(f"=> {ANSI_CODES[0]}error{ANSI_CODES[4]}: no operation specified")
     except KeyboardInterrupt:
         print(f"\n=> {ANSI_CODES[0]}error{ANSI_CODES[4]}: ctrl-c detection..")
         exit(1)
