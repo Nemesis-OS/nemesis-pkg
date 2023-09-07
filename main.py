@@ -19,6 +19,7 @@ REPOLIST = []
 CPU_FLAGS = []
 on_search_mode = False
 upgrade_pkg = False
+pkg_cache_ex = False
 
 def check_user_is_root():
     user = check_output('whoami')
@@ -70,7 +71,7 @@ def parse_config_file():
 
     environ["CC"] = npkg_cc
     environ["CXX"] = npkg_cxx
-    environ["MAKEOPTS"] = npkg_mkopts
+    environ["MAKEOPTS"] = npkg_mkopts 
     environ["CFLAGS"] = npkg_cflags
     environ["CXXFLAGS"] = npkg_cxxflags
 
@@ -127,21 +128,21 @@ def write_log(text: str):
     if log_not_there == True:
         chdir("/etc/nemesis-pkg")
         logfile = open("/etc/nemesis-pkg/nemesis-pkg.log", 'w')
-        logfile.write(f"{text}\n")
+        logfile.write(f"{text}")
         logfile.close()
     else:
         chdir("/etc/nemesis-pkg")
         logfile = open("/etc/nemesis-pkg/nemesis-pkg.log", 'r+')
         logfile.seek(0)
         if logfile.read().splitlines == []:
-            logfile.write(f"{text}\n")
+            logfile.write(f"{text}")
         else:
-            logfile.write(f"{text}\n")
+            logfile.write(f"\n{text}")
         logfile.truncate()
         logfile.close()
 
 def view_log():
-    print(f"{ANSI_CODES[3]}info{ANSI_CODES[4]}: viewing the nemesis-pkg log file")
+    print(f"=> {ANSI_CODES[3]}info{ANSI_CODES[4]}: viewing the nemesis-pkg log file")
     chdir("/etc/nemesis-pkg")
     try:
         logfile = open("/etc/nemesis-pkg/nemesis-pkg.log" , 'r', encoding="utf-8")
@@ -154,20 +155,20 @@ def remove_log():
     if check_user_is_root() == True:
         pass
     else:
-        print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: user is not root")
+        print(f"=> {ANSI_CODES[0]}error{ANSI_CODES[4]}: user is not root")
         exit(1)
 
-    yn = str(input(f"{ANSI_CODES[2]}warning{ANSI_CODES[4]}: removing the logfile will delete the list of all the operations you executed...[{ANSI_CODES[1]}y{ANSI_CODES[4]}/{ANSI_CODES[0]}N{ANSI_CODES[4]}] "))
+    yn = str(input(f"=> {ANSI_CODES[2]}warning{ANSI_CODES[4]}: removing the logfile will delete the list of all the operations you executed...[{ANSI_CODES[1]}y{ANSI_CODES[4]}/{ANSI_CODES[0]}N{ANSI_CODES[4]}] "))
     if yn in ["Y", 'y']:
         print(f"{ANSI_CODES[3]}info{ANSI_CODES[4]}: removing logfile")
         chdir("/etc/nemesis-pkg")
         if system("rm nemesis-pkg.log") == 0:
-            print(f"{ANSI_CODES[1]}sucess{ANSI_CODES[4]}: the logfile was removed succesfully")
+            print(f"=> {ANSI_CODES[1]}sucess{ANSI_CODES[4]}: the logfile was removed succesfully")
         else:
-            print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: something went wrong that is why the logfile was not removed")
+            print(f"=> {ANSI_CODES[0]}error{ANSI_CODES[4]}: something went wrong that is why the logfile was not removed")
             exit(1)
     else:
-        print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: the logfile was not deleted")
+        print(f"=> {ANSI_CODES[3]}note{ANSI_CODES[4]}: the logfile was not deleted")
 
 def list_packages():
     for i in range(0, len(REPOLIST)):
@@ -187,6 +188,7 @@ def install_multiple_packages(pkglist: list[str]):
         install_packages(i)
 
 def install_packages(pname: str):
+    global pkg_cache_ex
     if check_user_is_root() is True:
         pass
     else:
@@ -227,8 +229,13 @@ def install_packages(pname: str):
         try:
             mkdir(f"/var/cache/nemesis-pkg/{pname}")
         except FileExistsError:
-            system(f"rm -rf /var/cache/nemesis-pkg/{pname}")
-            mkdir(f"/var/cache/nemesis-pkg/{pname}")
+            yn = input(f"=> {ANSI_CODES[3]}note{ANSI_CODES[4]}: cache for {ANSI_CODES[2]}{pname}{ANSI_CODES[4]} exists... use it?[{ANSI_CODES[1]}y{ANSI_CODES[4]}/{ANSI_CODES[0]}N{ANSI_CODES[4]}] ")
+            if yn in ("y", "Y", "Yes", "yes"):
+                pkg_cache_ex = True
+                print(f"=> {ANSI_CODES[3]}note{ANSI_CODES[4]}: using cache")
+            else:
+                system(f"rm -rf /var/cache/nemesis-pkg/{pname}")
+                mkdir(f"/var/cache/nemesis-pkg/{pname}")
 
         chdir(f"/var/cache/nemesis-pkg/{pname}")
 
@@ -292,7 +299,10 @@ def install_packages(pname: str):
                     exit(1)
 					
         print(f"=> {ANSI_CODES[3]}info{ANSI_CODES[4]}: preparing source for {loads(build_contents)['core']['name']}@{loads(build_contents)['core']['version']}")
-        system('git clone '+loads(build_contents)['core']['source']+f" {loads(build_contents)['core']['name']}")
+
+        if pkg_cache_ex == False:
+            system(f"git clone {loads(build_contents)['core']['source']} {loads(build_contents)['core']['name']}")
+        
         if loads(build_contents)['core']['depends'] == []:
             print(f"=> {ANSI_CODES[3]}note{ANSI_CODES[4]}: {pname} has no dependencies so installing it")
             pass
@@ -499,15 +509,15 @@ def upgrade_packeges():
         repo_pkgiu[REPOLIST[i][2]] = []
 
     test = loads(installed_pkgs.read())
-
+    
     for i in list(test.keys()):
         with open(f"/etc/nemesis-pkg/{repo_pkgf[test[i]['repo']]}", 'r') as pkdb:
-            data = pkdb.read().split()
+            data = pkdb.read().split() 
             if i in data:
                 if version_to_int(data[data.index(i)+1]) > version_to_int(test[i]['version']):
                     upgradable.append(i)
                     print(f"=> {i} {ANSI_CODES[0]}{test[i]['version']}{ANSI_CODES[4]} -> {ANSI_CODES[1]}{data[data.index(i)+1]}{ANSI_CODES[4]}")
-                    pkg_upgrade = True
+                    pkg_upgrade = True 
             else:
                 continue
 
@@ -516,9 +526,9 @@ def upgrade_packeges():
     if pkg_upgrade == False:
         print(f"=> {ANSI_CODES[3]}note{ANSI_CODES[4]}: system upto date")
     else:
-        pass
+        pass 
 
-
+     
 VERSION = 0.1
 BUILD_ID = "-rc1"
 
