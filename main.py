@@ -71,52 +71,42 @@ def parse_config_file():
 
     environ["CC"] = npkg_cc
     environ["CXX"] = npkg_cxx
-    environ["MAKEOPTS"] = npkg_mkopts 
+    environ["MAKEOPTS"] = npkg_mkopts
     environ["CFLAGS"] = npkg_cflags
     environ["CXXFLAGS"] = npkg_cxxflags
 
-def sync_packages(PKGLIST: list[list[str]]):
-    if check_output("whoami") != b'root\n':
+def sync_database():
+    if check_user_is_root() == True:
+        pass
+    else:
         print(f"=> {ANSI_CODES[0]}error{ANSI_CODES[4]}: user not root")
         exit(1)
-    else:
-        pass
 
-    for i in range(0, len(PKGLIST)):
-        fexists = False
-        print(f"=> {ANSI_CODES[3]}note{ANSI_CODES[4]}: updating {ANSI_CODES[2]}{PKGLIST[i][2]}{ANSI_CODES[4]}")
-        if isfile(f"/etc/nemesis-pkg/{PKGLIST[i][1]}") is True:
-            fexists = True
-            plist = open(f"/etc/nemesis-pkg/{PKGLIST[i][1]}", 'r+', encoding="utf-8")
-            list_contents = plist.read()
-            pass
-        else:
-            print(f"=> {ANSI_CODES[3]}note{ANSI_CODES[4]}: {ANSI_CODES[2]}{PKGLIST[i][1]}{ANSI_CODES[4]} not found so creating it..")
-            plist = open(f"/etc/nemesis-pkg/{PKGLIST[i][1]}" , 'w', encoding="utf-8")
+    for i in list(REPOLIST.keys()):
         try:
-            downloaded_version = check_output(['curl' , PKGLIST[i][0]]).decode("utf-8")
+            web_contents = check_output(["curl", REPOLIST[i], '-s']).decode("utf-8")
         except CalledProcessError:
-            print(f"=> {ANSI_CODES[0]}error{ANSI_CODES[4]}: syncing {PKGLIST[i][2]} failed")
-            exit(1)
+            print(f"=> {ANSI_CODES[0]}error{ANSI_CODES[4]}: database for repo {ANSI_CODES[2]}{i}{ANSI_CODES[4]} failed to download")
+            continue
 
-        if fexists == False:
-            plist.write(str(downloaded_version))
-            plist.close()
-            print(f"=> {ANSI_CODES[3]}note{ANSI_CODES[4]}: made {ANSI_CODES[2]}{PKGLIST[i][1]}{ANSI_CODES[4]}")
-            ctime = strftime("%D %H:%M:%S")
-            write_log(f"{ctime} UPDATE {PKGLIST[i][1]}")
-        elif list_contents != str(downloaded_version):
-            plist.seek(0)
-            plist.write(str(downloaded_version))
-            plist.truncate()
-            plist.close()
-            print(f"=> {ANSI_CODES[3]}note{ANSI_CODES[4]}: {ANSI_CODES[2]}{PKGLIST[i][1]}{ANSI_CODES[4]} updated..")
-            ctime = strftime("%D %H:%M:%S")
-            write_log(f"{ctime} UPDATE {PKGLIST[i][1]}")
+        if isfile(f"/etc/nemesis-pkg/{i}.PKGLIST") == True:
+            with open(f"/etc/nemesis-pkg/{i}.PKGLIST", 'r+') as rpofile:
+                contents = rpofile.read()
+                if contents == web_contents:
+                    rpofile.close()
+                    print(f"=> {ANSI_CODES[3]}note{ANSI_CODES[4]}: database for repo {ANSI_CODES[2]}{i}{ANSI_CODES[4]} up to date")
+                else:
+                    rpofile.seek(0)
+                    rpofile.write(web_contents)
+                    rpofile.truncate()
+                    rpofile.close()
+                    print(f"=> {ANSI_CODES[3]}note{ANSI_CODES[4]}: database for repo {i} updated")
         else:
-            print(f"=> {ANSI_CODES[3]}note{ANSI_CODES[4]}: {ANSI_CODES[2]}{PKGLIST[i][1]}{ANSI_CODES[4]} was up to date")
-            ctime = strftime("%D %H:%M:%S")
-            write_log(f"{ctime} UPDATE {PKGLIST[i][1]}")
+            with open(f"/etc/nemesis-pkg/{i}.PKGLIST", 'w') as rpofile:
+                rpofile.write(web_contents)
+                rpofile.close()
+
+            print(f"=> {ANSI_CODES[2]}note{ANSI_CODES[4]}: made database for repo {ANSI_CODES[2]}{i}{ANSI_CODES[4]}")
 
 def write_log(text: str):
     if isfile("/etc/nemesis-pkg/nemesis-pkg.log") == True:
@@ -302,7 +292,7 @@ def install_packages(pname: str):
 
         if pkg_cache_ex == False:
             system(f"git clone {loads(build_contents)['core']['source']} {loads(build_contents)['core']['name']}")
-        
+
         if loads(build_contents)['core']['depends'] == []:
             print(f"=> {ANSI_CODES[3]}note{ANSI_CODES[4]}: {pname} has no dependencies so installing it")
             pass
@@ -349,13 +339,14 @@ def list_installed():
     print(f"=> {ANSI_CODES[3]}note{ANSI_CODES[4]}: this is the list of all installed packages")
     try:
         with open("/etc/nemesis-pkg/installed-packages.PKGLIST" , 'r', encoding="utf-8") as ipkglist_open:
-            a = list(loads(ipkglist_open.read()).keys())
-            a.sort()
-            for installed_pkgs in a:
-                print(installed_pkgs)
+            contents = loads(ipkglist_open.read())
+            pkgs = list(contents.keys())
+            pkgs.sort()
+            for installed_pkgs in pkgs:
+                print(f"=> {ANSI_CODES[2]}{installed_pkgs}{ANSI_CODES[4]}@{ANSI_CODES[1]}{contents[installed_pkgs]['version']}{ANSI_CODES[4]}")
 
             ipkglist_open.close()
-    except Exception:
+    except AttributeError:
         print(f"=> {ANSI_CODES[0]}error{ANSI_CODES[4]}: something went wrong")
 
 def list_repos():
@@ -509,15 +500,15 @@ def upgrade_packeges():
         repo_pkgiu[REPOLIST[i][2]] = []
 
     test = loads(installed_pkgs.read())
-    
+
     for i in list(test.keys()):
         with open(f"/etc/nemesis-pkg/{repo_pkgf[test[i]['repo']]}", 'r') as pkdb:
-            data = pkdb.read().split() 
+            data = pkdb.read().split()
             if i in data:
                 if version_to_int(data[data.index(i)+1]) > version_to_int(test[i]['version']):
                     upgradable.append(i)
                     print(f"=> {i} {ANSI_CODES[0]}{test[i]['version']}{ANSI_CODES[4]} -> {ANSI_CODES[1]}{data[data.index(i)+1]}{ANSI_CODES[4]}")
-                    pkg_upgrade = True 
+                    pkg_upgrade = True
             else:
                 continue
 
@@ -526,9 +517,9 @@ def upgrade_packeges():
     if pkg_upgrade == False:
         print(f"=> {ANSI_CODES[3]}note{ANSI_CODES[4]}: system upto date")
     else:
-        pass 
+        pass
 
-     
+
 VERSION = 0.1
 BUILD_ID = "-rc1"
 
@@ -536,7 +527,7 @@ if __name__ == "__main__":
     parse_config_file()
     try:
         if len(argv) >= 2 and argv[1] in ("S", "sync"):
-            sync_packages(REPOLIST)
+            sync_database()
         elif len(argv) >= 2 and argv[1] in ("v", "version"):
             print(f"nemesis-pkg build {VERSION}{BUILD_ID}")
         elif len(argv) >= 2 and argv[1] in ("log", "Log", "L"):
