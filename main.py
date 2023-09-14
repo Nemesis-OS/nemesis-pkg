@@ -100,7 +100,7 @@ def sync_database():
                     rpofile.write(web_contents)
                     rpofile.truncate()
                     rpofile.close()
-                    print(f"=> {ANSI_CODES[3]}note{ANSI_CODES[4]}: database for repo {i} updated")
+                    print(f"=> {ANSI_CODES[3]}note{ANSI_CODES[4]}: database for repo {ANSI_CODES[2]}{i}{ANSI_CODES[4]} updated")
         else:
             with open(f"/etc/nemesis-pkg/{i}.PKGLIST", 'w') as rpofile:
                 rpofile.write(web_contents)
@@ -490,14 +490,9 @@ def upgrade_packeges():
     print(f"=> {ANSI_CODES[3]}note{ANSI_CODES[4]}: checking for upgradable packages")
     upgrade_pkg = False
     installed_pkgs = open("/etc/nemesis-pkg/installed-packages.PKGLIST", 'r')
-    repo_pkgi = {}
-    repo_pkgiu = {}
     repo_pkgf = {}
-    upgradable = []
-    for i in range(0, len(REPOLIST)):
-        repo_pkgf[REPOLIST[i][2]] = REPOLIST[i][1]
-        repo_pkgi[REPOLIST[i][2]] = []
-        repo_pkgiu[REPOLIST[i][2]] = []
+    for i in list(REPOLIST.keys()):
+        repo_pkgf[i] = f"{i}.PKGLIST"
 
     test = loads(installed_pkgs.read())
 
@@ -506,7 +501,6 @@ def upgrade_packeges():
             data = pkdb.read().split()
             if i in data:
                 if version_to_int(data[data.index(i)+1]) > version_to_int(test[i]['version']):
-                    upgradable.append(i)
                     print(f"=> {i} {ANSI_CODES[0]}{test[i]['version']}{ANSI_CODES[4]} -> {ANSI_CODES[1]}{data[data.index(i)+1]}{ANSI_CODES[4]}")
                     pkg_upgrade = True
             else:
