@@ -187,6 +187,7 @@ def install_packages(pname: str):
 
     install_source = {}
     repo_name = ""
+    reinstall_yn = None
 
     if return_if_pkg_exist(pname) == False:
         pass
@@ -252,7 +253,8 @@ def install_packages(pname: str):
                     crepo_src = crepo_src+url+"/"
             
             current_db = open(f"/etc/nemesis-pkg/{i}.PKGLIST", 'r')
-            for j in current_db.read().splitlines():
+            
+            for j in current_db.read().split():
                 if j.split()[0] in pname:
                     if i in list(install_source.keys()):
                         pass
@@ -287,10 +289,9 @@ def install_packages(pname: str):
                 repo_name = repo_choice
                 curl = install_source[repo_choice]+pname+"/build"
 
-    print(f"=> {ANSI_CODES[3]}info{ANSI_CODES[4]}: downloading build.json")
-
     if pkg_cache_ex == False:
         try:
+            print(f"=> {ANSI_CODES[3]}info{ANSI_CODES[4]}: downloading build.json")
             build_contents = check_output(['curl' , curl, "-o", "build.json"]).decode('utf-8')
         except CalledProcessError:
             print(f"=> {ANSI_CODES[0]}error{ANSI_CODES[4]}: {ANSI_CODES[2]}build.json{ANSI_CODES[4]} failed to download")
@@ -298,6 +299,10 @@ def install_packages(pname: str):
     
     build_contents = open("build.json", 'r')
     build_contents = build_contents.read()
+
+    if build_contents == "404: Not Found":
+        print(f"=> {ANSI_CODES[0]}error{ANSI_CODES[4]}: {ANSI_CODES[2]}build.json{ANSI_CODES[4]} failed to download")
+        exit(1)
 
     try:
         if loads(build_contents)['core']['cpu_flags'] == []:
@@ -310,10 +315,9 @@ def install_packages(pname: str):
                 else:
                     print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: {i} not in cpu flags")
                     exit(1)
-					
-        print(f"=> {ANSI_CODES[3]}info{ANSI_CODES[4]}: preparing source for {loads(build_contents)['core']['name']}@{loads(build_contents)['core']['version']}")
-
+	
         if pkg_cache_ex == False:
+            print(f"=> {ANSI_CODES[3]}info{ANSI_CODES[4]}: preparing source for {loads(build_contents)['core']['name']}@{loads(build_contents)['core']['version']}")
             system(f"git clone {loads(build_contents)['core']['source']} {loads(build_contents)['core']['name']}")
 
         if loads(build_contents)['core']['depends'] == []:
