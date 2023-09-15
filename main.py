@@ -161,10 +161,10 @@ def remove_log():
         print(f"=> {ANSI_CODES[3]}note{ANSI_CODES[4]}: the logfile was not deleted")
 
 def list_packages():
-    for i in range(0, len(REPOLIST)):
-        file = open(f"/etc/nemesis-pkg/{REPOLIST[i][1]}" , 'r')
+    for i in list(REPOLIST.keys()):
+        file = open(f"/etc/nemesis-pkg/{i}.PKGLIST" , 'r')
         for h in file.read().splitlines():
-            print(str(f"{ANSI_CODES[2]}{REPOLIST[i][2]}{ANSI_CODES[4]}/{h.split()[0]} {ANSI_CODES[1]}{h.split()[1]}{ANSI_CODES[4]}"))
+            print(str(f"=> {ANSI_CODES[2]}{i}{ANSI_CODES[4]}/{h.split()[0]} {ANSI_CODES[1]}{h.split()[1]}{ANSI_CODES[4]}"))
 
 
 def install_multiple_packages(pkglist: list[str]):
@@ -368,28 +368,20 @@ def list_installed():
 
 def list_repos():
     print(f"=> {ANSI_CODES[3]}note{ANSI_CODES[4]}: the available repositories are:")
-    for i in REPOLIST:
-        print(i[2])
+    for i in list(REPOLIST.keys()):
+        print(f"=> {ANSI_CODES[2]}{i}{ANSI_CODES[4]}")
 
 def list_pkgs_from_repo(rname: str):
-    print(f"=> {ANSI_CODES[3]}note{ANSI_CODES[4]}: checking if {rname} is a valid repository")
-    rexists = False
-    rpofile = ""
-    for i in REPOLIST:
-        if rname not in i:
-            continue
-        else:
-            rexists = True
-            rpofile = "/etc/nemesis-pkg/"+i[1]
-            break
-
-    if rexists == False:
-        print(f"=> {ANSI_CODES[0]}error{ANSI_CODES[4]}: {rname} is not a valid repository.")
+    if rname in list(REPOLIST.keys()):
+        pass
     else:
-        print(f"=> {ANSI_CODES[3]}note{ANSI_CODES[4]}: showing the list of packages present in {rname}")
-        rpofile_open = open(rpofile , 'r')
-        for i in rpofile_open.read().splitlines():
-            print(i.split()[0], f"{ANSI_CODES[2]}{i.split()[1]}{ANSI_CODES[4]}")
+        print(f"=> {ANSI_CODES[0]}error{ANSI_CODES[4]}: {ANSI_CODES[2]}{rname}{ANSI_CODES[4]} is not a valid repository.")
+        exit(1)
+
+    print(f"=> {ANSI_CODES[3]}note{ANSI_CODES[4]}: showing the list of packages in {ANSI_CODES[2]}{rname}{ANSI_CODES[4]}")
+    rpofile_open = open(f"/etc/nemesis-pkg/{rname}.PKGLIST" , 'r')
+    for i in rpofile_open.read().splitlines():
+        print(f"=> {ANSI_CODES[2]}{i.split()[0]}{ANSI_CODES[4]}@{ANSI_CODES[1]}{i.split()[1]}{ANSI_CODES[4]}")
 
 
 def uninstall_new(query: str):
