@@ -231,50 +231,67 @@ def install_packages(pname: str):
 
     curl = ""
 
-    print(f"=> {ANSI_CODES[3]}build{ANSI_CODES[4]}: checking if {ANSI_CODES[2]}{pname}{ANSI_CODES[4]} in repos.")
-    for i in range(0, len(REPOLIST)):
-        current_db = open(f"/etc/nemesis-pkg/{REPOLIST[i][1]}", 'r')
-        for j in current_db.read().splitlines():
-            if j.split()[0] in pname:
-                if REPOLIST[i][2] in list(install_source.keys()):
-                    pass
+    if pkg_cache_ex == False:
+        print(f"=> {ANSI_CODES[3]}build{ANSI_CODES[4]}: checking if {ANSI_CODES[2]}{pname}{ANSI_CODES[4]} in repos.")
+
+        for i in list(REPOLIST.keys()):
+            src = REPOLIST[i].split("/")
+            src.pop(src.__len__()-1)
+            crepo_src = ""
+
+            for url in src:
+                if url == "https:":
+                    crepo_src = crepo_src+url+"//"
                 else:
-                    install_source[REPOLIST[i][2]] = REPOLIST[i][3]
-                current_db.close()
-            else:
-                current_db.close()
-                continue
+                    crepo_src = crepo_src+url+"/"
+            
+            current_db = open(f"/etc/nemesis-pkg/{i}.PKGLIST", 'r')
+            for j in current_db.read().splitlines():
+                if j.split()[0] in pname:
+                    if i in list(install_source.keys()):
+                        pass
+                    else:
+                        install_source[i] = crepo_src
+                    current_db.close()
+                else:
+                    current_db.close()
+                    continue
 
-        current_db.close()
-        continue
+            current_db.close()
+            continue
 
-    if install_source == {}:
-        print(f"=> {ANSI_CODES[0]}error{ANSI_CODES[4]}: {ANSI_CODES[2]}{pname}{ANSI_CODES[4]} not in repos")
-        exit(1)
-    else:
-        pass
-
-    if len(list(install_source.keys())) == 1:
-        repo_name = list(install_source.keys())[0]
-        curl = install_source[list(install_source.keys())[0]]+pname+"/build"
-    else:
-        print(f"=> {ANSI_CODES[3]}note{ANSI_CODES[4]}: pkg {pname} found in multiple repos")
-        for i in list(install_source.keys()):
-            print(i)
-        repo_choice = input(f"=> {ANSI_CODES[3]}input{ANSI_CODES[4]}: {pname} should be installed from which repo? ")
-        if repo_choice not in list(install_source.keys()):
-            print(f"=> {ANSI_CODES[0]}error{ANSI_CODES[4]}: repo {repo_choice} not enabled")
+        if install_source == {}:
+            print(f"=> {ANSI_CODES[0]}error{ANSI_CODES[4]}: {ANSI_CODES[2]}{pname}{ANSI_CODES[4]} not in repos")
             exit(1)
         else:
-            repo_name = repo_choice
-            curl = install_source[repo_choice]+pname+"/build"
+            pass
+
+        if len(list(install_source.keys())) == 1:
+            repo_name = list(install_source.keys())[0]
+            curl = install_source[list(install_source.keys())[0]]+pname+"/build"
+        else:
+            print(f"=> {ANSI_CODES[3]}note{ANSI_CODES[4]}: pkg {pname} found in multiple repos")
+            for i in list(install_source.keys()):
+                print(i)
+            repo_choice = input(f"=> {ANSI_CODES[3]}input{ANSI_CODES[4]}: {pname} should be installed from which repo? ")
+            if repo_choice not in list(install_source.keys()):
+                print(f"=> {ANSI_CODES[0]}error{ANSI_CODES[4]}: repo {repo_choice} not enabled")
+                exit(1)
+            else:
+                repo_name = repo_choice
+                curl = install_source[repo_choice]+pname+"/build"
 
     print(f"=> {ANSI_CODES[3]}info{ANSI_CODES[4]}: downloading build.json")
-    try:
-        build_contents = check_output(['curl' , curl]).decode('utf-8')
-    except CalledProcessError:
-        print(f"=> {ANSI_CODES[0]}error{ANSI_CODES[4]}: {ANSI_CODES[2]}build.json{ANSI_CODES[4]} failed to download")
-        exit(1)
+
+    if pkg_cache_ex == False:
+        try:
+            build_contents = check_output(['curl' , curl, "-o", "build.json"]).decode('utf-8')
+        except CalledProcessError:
+            print(f"=> {ANSI_CODES[0]}error{ANSI_CODES[4]}: {ANSI_CODES[2]}build.json{ANSI_CODES[4]} failed to download")
+            exit(1)
+    
+    build_contents = open("build.json", 'r')
+    build_contents = build_contents.read()
 
     try:
         if loads(build_contents)['core']['cpu_flags'] == []:
