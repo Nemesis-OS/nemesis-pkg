@@ -196,6 +196,12 @@ def install_packages(pname: str):
             return None
         else:
             pass
+    
+    if reinstall_yn in ("Y", "y"):
+        with open("/etc/nemesis-pkg/installed-packages.PKGLIST", 'r') as ipkgl:
+            repo_name = loads(ipkgl.read())[pname]["repo"]
+
+        ipkgl.close()
 
     if pbf is False:
         try:
