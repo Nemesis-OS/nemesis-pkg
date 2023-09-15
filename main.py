@@ -465,9 +465,8 @@ def search_package(query: str):
     on_search_mode = True
     print(f"=> {ANSI_CODES[3]}note{ANSI_CODES[4]}: looking for pkgs matching to {ANSI_CODES[2]}{query}{ANSI_CODES[4]}")
     arr = []
-    chdir("/etc/nemesis-pkg")
-    for repo_files in REPOLIST:
-        file = open(repo_files[1], 'r', encoding="utf-8")
+    for repo_files in list(REPOLIST.keys()):
+        file = open(f"/etc/nemesis-pkg/{repo_files}.PKGLIST", 'r', encoding="utf-8")
         for pkg in file.read().splitlines():
             chars = []
             for let in range(0, len(query)):
