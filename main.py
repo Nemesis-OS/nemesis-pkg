@@ -478,7 +478,7 @@ def search_package(query: str):
                     chars.append(query[let])
 
             if len(chars) == len(query) and pkg.split()[0] not in arr:
-                arr.append(pkg.split()[0])
+                arr.append([pkg.split()[0], pkg.split()[1]])
             else:
                 pass
 
@@ -487,10 +487,10 @@ def search_package(query: str):
     arr.sort()
     if arr != []:
         for matching in arr:
-            if return_if_pkg_exist(matching) == True:
-                print(f"{matching}{ANSI_CODES[1]}[installed]{ANSI_CODES[4]}")
+            if return_if_pkg_exist(matching[0]) == True:
+                print(f"=> {ANSI_CODES[2]}{matching[0]}{ANSI_CODES[4]}@{ANSI_CODES[3]}{matching[1]}{ANSI_CODES[0]}{ANSI_CODES[1]}[installed]{ANSI_CODES[4]}")
             else:
-                print(matching)
+                print(f"=> {ANSI_CODES[2]}{matching[0]}{ANSI_CODES[4]}@{ANSI_CODES[3]}{matching[1]}{ANSI_CODES[4]}")
     else:
         print(f"=> {ANSI_CODES[2]}warning{ANSI_CODES[4]}: nothing similar to {query}")
 
@@ -531,7 +531,6 @@ def upgrade_packeges():
     else:
         pass
 
-
 VERSION = 0.1
 BUILD_ID = "-rc1"
 
@@ -546,8 +545,8 @@ if __name__ == "__main__":
             if len(argv) == 2:
                 print('''log: this allows you to view/delete logs
 ========================================
-view: this allows you to view logfile
-delete: this allows you to delete logfile''')
+[v]iew: this allows you to view logfile
+[d]elete: this allows you to delete logfile''')
             elif len(argv) == 3 and argv[2] in ("view", "v"):
                 view_log()
             elif len(argv) == 3 and argv[2] in ("delete", "d"):
