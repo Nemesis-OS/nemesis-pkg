@@ -20,6 +20,7 @@ CPU_FLAGS = []
 on_search_mode = False
 upgrade_pkg = False
 pkg_cache_ex = False
+npkg_pretty = True # enables for beautiful search/list outputs
 
 def check_user_is_root():
     user = check_output('whoami')
@@ -30,7 +31,7 @@ def check_user_is_root():
 
 
 def parse_config_file():
-    global disable_check_important_files, ANSI_CODES, REPOLIST, cpu_flags, pbf, npkg_cc, npkg_cxx, npkg_mkopts, npkg_cflags, npkg_cxxflags
+    global disable_check_important_files, ANSI_CODES, REPOLIST, cpu_flags, pbf, npkg_cc, npkg_cxx, npkg_mkopts, npkg_cflags, npkg_cxxflags, npkg_pretty
     if isfile("/etc/nemesis-pkg/config.json") is True:
         pass
     else:
@@ -68,6 +69,9 @@ def parse_config_file():
 
     if "CXXFLAGS" in list(config.keys()):
         npkg_cxxflags = config["CXXFLAGS"]
+
+    if "PRETTY_MODE" in list(config.keys()):
+        npkg_pretty = config["PRETTY_MODE"]
 
     environ["CC"] = npkg_cc
     environ["CXX"] = npkg_cxx
@@ -139,7 +143,7 @@ def view_log():
         print(logfile.read())
         logfile.close()
     except FileNotFoundError:
-        print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: file not found")
+        print(f"=> {ANSI_CODES[0]}error{ANSI_CODES[4]}: file not found")
 
 def remove_log():
     if check_user_is_root() == True:
@@ -165,7 +169,6 @@ def list_packages():
         file = open(f"/etc/nemesis-pkg/{i}.PKGLIST" , 'r')
         for h in file.read().splitlines():
             print(str(f"=> {ANSI_CODES[2]}{i}{ANSI_CODES[4]}/{h.split()[0]} {ANSI_CODES[1]}{h.split()[1]}{ANSI_CODES[4]}"))
-
 
 def install_multiple_packages(pkglist: list[str]):
     if check_user_is_root():
@@ -335,7 +338,10 @@ def list_installed():
             pkgs = list(contents.keys())
             pkgs.sort()
             for installed_pkgs in pkgs:
-                print(f"=> {ANSI_CODES[2]}{installed_pkgs}{ANSI_CODES[4]}@{ANSI_CODES[1]}{contents[installed_pkgs]['version']}{ANSI_CODES[4]}")
+                if npkg_pretty == True:
+                    print(f" {ANSI_CODES[2]}{installed_pkgs}{ANSI_CODES[4]}@{ANSI_CODES[1]}{contents[installed_pkgs]['version']}{ANSI_CODES[4]}")
+                else:
+                    print(f" {installed_pkgs}@{contents[installed_pkgs]['version']}")
             ipkglist_open.close()
     except AttributeError:
         print(f"=> {ANSI_CODES[0]}error{ANSI_CODES[4]}: something went wrong")
@@ -343,7 +349,10 @@ def list_installed():
 def list_repos():
     print(f"=> {ANSI_CODES[3]}note{ANSI_CODES[4]}: the available repositories are:")
     for i in list(REPOLIST.keys()):
-        print(f"=> {ANSI_CODES[2]}{i}{ANSI_CODES[4]}")
+        if npkg_pretty == True:
+            print(f" {ANSI_CODES[2]}{i}{ANSI_CODES[4]}")
+        else:
+            print(f" {i}")
 
 def list_pkgs_from_repo(rname: str):
     if rname in list(REPOLIST.keys()):
@@ -355,7 +364,10 @@ def list_pkgs_from_repo(rname: str):
     print(f"=> {ANSI_CODES[3]}note{ANSI_CODES[4]}: showing the list of packages in {ANSI_CODES[2]}{rname}{ANSI_CODES[4]}")
     rpofile_open = open(f"/etc/nemesis-pkg/{rname}.PKGLIST" , 'r')
     for i in rpofile_open.read().splitlines():
-        print(f"=> {ANSI_CODES[2]}{i.split()[0]}{ANSI_CODES[4]}@{ANSI_CODES[1]}{i.split()[1]}{ANSI_CODES[4]}")
+        if npkg_pretty == True:
+            print(f" {ANSI_CODES[2]}{i.split()[0]}{ANSI_CODES[4]}@{ANSI_CODES[1]}{i.split()[1]}{ANSI_CODES[4]}")
+        else:
+            print(f" {i.split()[0]}@{i.split()[1]}")
 
 
 def uninstall_new(query: str):
@@ -388,6 +400,7 @@ def uninstall_new(query: str):
                 continue
             else:
                 print(f"=> {ANSI_CODES[0]}error{ANSI_CODES[4]}: {query} failed to uninstall")
+                write_log(strftime(f"%D %H:%M:%S PASS: {query} uninstalled"))
                 exit(1)
 
         installed_database.pop(query)
@@ -396,6 +409,7 @@ def uninstall_new(query: str):
         ipkgl.truncate()
         ipkgl.close()
         print(f"=> {ANSI_CODES[1]}sucess{ANSI_CODES[4]}: {query} uninstalled")
+        write_log(strftime(f"%D %H:%M:%S PASS: {query} uninstalled"))
     else:
         for i in pkg_depending_in_query:
             print(i)
@@ -451,10 +465,16 @@ def search_package(query: str):
     arr.sort()
     if arr != []:
         for matching in arr:
-            if return_if_pkg_exist(matching[0]) == True:
-                print(f" {ANSI_CODES[2]}{matching[0]}{ANSI_CODES[4]}@{ANSI_CODES[3]}{matching[1]}{ANSI_CODES[0]} {ANSI_CODES[1]}[installed]{ANSI_CODES[4]}")
+            if npkg_pretty == True:
+                if return_if_pkg_exist(matching[0]) == True:
+                    print(f" {ANSI_CODES[2]}{matching[0]}{ANSI_CODES[4]}@{ANSI_CODES[3]}{matching[1]}{ANSI_CODES[0]} {ANSI_CODES[1]}[installed]{ANSI_CODES[4]}")
+                else:
+                    print(f" {ANSI_CODES[2]}{matching[0]}{ANSI_CODES[4]}@{ANSI_CODES[3]}{matching[1]}{ANSI_CODES[4]}")
             else:
-                print(f" {ANSI_CODES[2]}{matching[0]}{ANSI_CODES[4]}@{ANSI_CODES[3]}{matching[1]}{ANSI_CODES[4]}")
+                if return_if_pkg_exist(matching[0]) == True:
+                    print(f" {matching[0]}@{matching[1]} {ANSI_CODES[1]}[installed]{ANSI_CODES[4]}")
+                else:
+                    print(f" {matching[0]}@{matching[1]}")
     else:
         print(f"=> {ANSI_CODES[2]}warning{ANSI_CODES[4]}: nothing similar to {ANSI_CODES[2]}{query}{ANSI_CODES[4]}")
 
