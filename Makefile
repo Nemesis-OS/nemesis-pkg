@@ -1,3 +1,5 @@
+binary:
+	pyinstaller --noconfirm --onefile --console  "main.py"
 install:
 	@echo "installing npkg-cfgen"
 	install -Dm755 genconfig.py /usr/bin/npkg-cfgen
