@@ -1,9 +1,9 @@
 #!/usr/bin/python3
 from os import mkdir, chdir, system, environ
-from os.path import isfile
+from os.path import isfile, isdir
 from sys import argv, path, exit
 from subprocess import check_output, CalledProcessError
-from time import strftime
+from time import strftime, sleep
 from json import loads, dumps
 from json.decoder import JSONDecodeError
 
@@ -20,6 +20,7 @@ CPU_FLAGS = []
 on_search_mode = False
 upgrade_pkg = False
 pkg_cache_ex = False
+npkg_pretty = True # enables for beautiful search/list outputs
 
 def check_user_is_root():
     user = check_output('whoami')
@@ -30,7 +31,7 @@ def check_user_is_root():
 
 
 def parse_config_file():
-    global disable_check_important_files, ANSI_CODES, REPOLIST, cpu_flags, pbf, npkg_cc, npkg_cxx, npkg_mkopts, npkg_cflags, npkg_cxxflags
+    global disable_check_important_files, ANSI_CODES, REPOLIST, cpu_flags, pbf, npkg_cc, npkg_cxx, npkg_mkopts, npkg_cflags, npkg_cxxflags, npkg_pretty
     if isfile("/etc/nemesis-pkg/config.json") is True:
         pass
     else:
@@ -68,6 +69,9 @@ def parse_config_file():
 
     if "CXXFLAGS" in list(config.keys()):
         npkg_cxxflags = config["CXXFLAGS"]
+
+    if "PRETTY_MODE" in list(config.keys()):
+        npkg_pretty = config["PRETTY_MODE"]
 
     environ["CC"] = npkg_cc
     environ["CXX"] = npkg_cxx
@@ -139,7 +143,7 @@ def view_log():
         print(logfile.read())
         logfile.close()
     except FileNotFoundError:
-        print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: file not found")
+        print(f"=> {ANSI_CODES[0]}error{ANSI_CODES[4]}: file not found")
 
 def remove_log():
     if check_user_is_root() == True:
@@ -166,7 +170,6 @@ def list_packages():
         for h in file.read().splitlines():
             print(str(f"=> {ANSI_CODES[2]}{i}{ANSI_CODES[4]}/{h.split()[0]} {ANSI_CODES[1]}{h.split()[1]}{ANSI_CODES[4]}"))
 
-
 def install_multiple_packages(pkglist: list[str]):
     if check_user_is_root():
         pass
@@ -178,190 +181,155 @@ def install_multiple_packages(pkglist: list[str]):
         install_packages(i)
 
 def install_packages(pname: str):
-    global pkg_cache_ex
-    if check_user_is_root() is True:
-        pass
-    else:
-        print(f"=> {ANSI_CODES[0]}error{ANSI_CODES[4]}: user is not root")
-        exit(1)
-
-    install_source = {}
-    repo_name = ""
-    reinstall_yn = None
-
-    if return_if_pkg_exist(pname) == False:
-        pass
-    else:
-        reinstall_yn = input(f"=> {ANSI_CODES[3]}note{ANSI_CODES[4]}: {ANSI_CODES[2]}{pname}{ANSI_CODES[4]} is installed.. do you wanna reinstall[{ANSI_CODES[1]}y{ANSI_CODES[4]}/{ANSI_CODES[0]}n{ANSI_CODES[4]}] ")
-        if reinstall_yn in ('n', 'N'):
-            return None
-        else:
-            pass
-    
-    if reinstall_yn in ("Y", "y"):
-        with open("/etc/nemesis-pkg/installed-packages.PKGLIST", 'r') as ipkgl:
-            repo_name = loads(ipkgl.read())[pname]["repo"]
-
-        ipkgl.close()
-
-    if pbf is False:
-        try:
-            mkdir("/tmp/nemesis-pkg-build/")
-        except FileExistsError:
-            pass
-
-        try:
-            mkdir(f"/tmp/nemesis-pkg-build/{pname}")
-        except FileExistsError:
-            system(f"rm -rf /tmp/nemesis-pkg-build/{pname}")
-            mkdir(f"/tmp/nemesis-pkg-build/{pname}")
-            chdir(f"/tmp/nemesis-pkg-build/{pname}")
-            pass
-    else:
-        try:
-            mkdir("/var/cache/nemesis-pkg")
-        except FileExistsError:
-            pass
-
-        try:
-            mkdir(f"/var/cache/nemesis-pkg/{pname}")
-        except FileExistsError:
-            yn = input(f"=> {ANSI_CODES[3]}note{ANSI_CODES[4]}: cache for {ANSI_CODES[2]}{pname}{ANSI_CODES[4]} exists... use it?[{ANSI_CODES[1]}y{ANSI_CODES[4]}/{ANSI_CODES[0]}N{ANSI_CODES[4]}] ")
-            if yn in ("y", "Y", "Yes", "yes"):
-                pkg_cache_ex = True
-                print(f"=> {ANSI_CODES[3]}note{ANSI_CODES[4]}: using cache")
-            else:
-                system(f"rm -rf /var/cache/nemesis-pkg/{pname}")
-                mkdir(f"/var/cache/nemesis-pkg/{pname}")
-
-        chdir(f"/var/cache/nemesis-pkg/{pname}")
-
+    pkg_in_repo = {}
     curl = ""
+    repo_name = ""
 
-    if pkg_cache_ex == False:
-        print(f"=> {ANSI_CODES[3]}build{ANSI_CODES[4]}: checking if {ANSI_CODES[2]}{pname}{ANSI_CODES[4]} in repos.")
-
-        for i in list(REPOLIST.keys()):
-            src = REPOLIST[i].split("/")
-            src.pop(src.__len__()-1)
-            crepo_src = ""
-
-            for url in src:
-                if url == "https:":
-                    crepo_src = crepo_src+url+"//"
-                else:
-                    crepo_src = crepo_src+url+"/"
+    if return_if_pkg_exist(pname) == True:
+        reinstall = input(f"=> {ANSI_CODES[3]}note{ANSI_CODES[4]}: {ANSI_CODES[2]}{pname}{ANSI_CODES[4]} is installed.. reinstall[{ANSI_CODES[1]}y{ANSI_CODES[4]}/{ANSI_CODES[0]}N{ANSI_CODES[4]}]? ")
+        with open("/etc/nemesis-pkg/installed-packages.PKGLIST", 'r') as ipkgdb:
+            repo_name = loads(ipkgdb.read())[pname]['repo']
+        ipkgdb.close()
+        
+        if reinstall in ("N", "n", "no"):
+            return 0
             
-            current_db = open(f"/etc/nemesis-pkg/{i}.PKGLIST", 'r')
-            
-            for j in current_db.read().split():
-                if j.split()[0] in pname:
-                    if i in list(install_source.keys()):
-                        pass
-                    else:
-                        install_source[i] = crepo_src
-                    current_db.close()
-                else:
-                    current_db.close()
-                    continue
+    for i in list(REPOLIST.keys()):
+        with open(f"/etc/nemesis-pkg/{i}.PKGLIST", 'r') as db:
+            contents = db.read()
+            for j in contents.splitlines():
+                if j.split()[0] == pname:
+                    pkg_in_repo[i] = REPOLIST[i]
 
-            current_db.close()
-            continue
+        db.close()
 
-        if install_source == {}:
-            print(f"=> {ANSI_CODES[0]}error{ANSI_CODES[4]}: {ANSI_CODES[2]}{pname}{ANSI_CODES[4]} not in repos")
-            exit(1)
-        else:
-            pass
+    if pkg_in_repo == {}:
+        print(f"=> {ANSI_CODES[0]}error{ANSI_CODES[4]}: {ANSI_CODES[2]}{pname}{ANSI_CODES[4]} not in repos")
+        return 1
+    else:
+        pass
 
-        if len(list(install_source.keys())) == 1:
-            repo_name = list(install_source.keys())[0]
-            curl = install_source[list(install_source.keys())[0]]+pname+"/build"
-        else:
-            print(f"=> {ANSI_CODES[3]}note{ANSI_CODES[4]}: pkg {pname} found in multiple repos")
-            for i in list(install_source.keys()):
-                print(i)
-            repo_choice = input(f"=> {ANSI_CODES[3]}input{ANSI_CODES[4]}: {pname} should be installed from which repo? ")
-            if repo_choice not in list(install_source.keys()):
-                print(f"=> {ANSI_CODES[0]}error{ANSI_CODES[4]}: repo {repo_choice} not enabled")
-                exit(1)
+    for i in list(pkg_in_repo.keys()):
+        dbf = pkg_in_repo[i].split("/")
+        dbf.pop(len(dbf)-1)
+        src = ""
+
+        for j in dbf:
+            if j == "https:" or j == "http:":
+                src = src+j+"//"
             else:
-                repo_name = repo_choice
-                curl = install_source[repo_choice]+pname+"/build"
+                src = src+j+"/"
 
-    if pkg_cache_ex == False:
-        try:
-            print(f"=> {ANSI_CODES[3]}info{ANSI_CODES[4]}: downloading build.json")
-            build_contents = check_output(['curl' , curl, "-o", "build.json"]).decode('utf-8')
-        except CalledProcessError:
-            print(f"=> {ANSI_CODES[0]}error{ANSI_CODES[4]}: {ANSI_CODES[2]}build.json{ANSI_CODES[4]} failed to download")
-            exit(1)
+        pkg_in_repo[i] = f"{src}{pname}/build"
     
-    build_contents = open("build.json", 'r')
-    build_contents = build_contents.read()
+    if len(list(pkg_in_repo.keys())) > 1:
+        for i in list(pkg_in_repo.keys()):
+            print(i)
+            
+        repo_name = input(f"=> {ANSI_CODES[3]}note{ANSI_CODES[4]}: enter repo from which {ANSI_CODES[2]}{pname}{ANSI_CODES[4]} should be installed? ")
+        
+        if repo_name not in list(pkg_in_repo.keys()):
+            print(f"=> {ANSI_CODES[1]}error{ANSI_CODES[4]}: repo {ANSI_CODES[2]}{repo_name}{ANSI_CODES[4]} invalid")
+            return 1
+        else:
+            curl = pkg_in_repo[repo_name]
+        
+    else:
+        repo_name = list(pkg_in_repo.keys())[0]
+        curl = pkg_in_repo[list(pkg_in_repo.keys())[0]]
 
-    if build_contents == "404: Not Found":
-        print(f"=> {ANSI_CODES[0]}error{ANSI_CODES[4]}: {ANSI_CODES[2]}build.json{ANSI_CODES[4]} failed to download")
-        exit(1)
+    # create cache
+
+    use_cache = False
+    
+    if isdir(f"/var/cache/nemesis-pkg/{pname}") == True or isdir(f"/tmp/nemesis-pkg/{pname}") == True:
+        use_cache = str(input(f"=> {ANSI_CODES[3]}note{ANSI_CODES[4]}: cache found for {pname}.. use[{ANSI_CODES[1]}y{ANSI_CODES[4]}/{ANSI_CODES[0]}N{ANSI_CODES[4]}]? "))
+        
+    if use_cache in ("y", "Y", "yes"):
+        if isdir(f"/var/cache/nemesis-pkg/{pname}") == True:
+            chdir(f"/var/cache/nemesis-pkg/{pname}")
+        else:
+            chdir(f"/tmp/nemesis-pkg/{pname}")
+    else:
+        if pbf == True:
+            chdir("/var/cache/nemesis-pkg")
+            if isdir(pname) == True:
+                system(f"rm -rf {pname}")
+        else:
+            chdir("/tmp/nemesis-pkg")
+            if isdir(pname) == True:
+                system(f"rm -rf {pname}")
+
+        mkdir(pname)
+        chdir(pname)
+
+        try:
+            build_file = check_output(["curl", curl, "-o", "build"]).decode("utf-8")
+        except CalledProcessError:
+            print(f"=> {ANSI_CODES[0]}error{ANSI_CODES[4]}: the build file was unable to download")
+            return 1
 
     try:
-        if loads(build_contents)['core']['cpu_flags'] == []:
-            pass
-        else:
-            print(f"=> {ANSI_CODES[3]}note{ANSI_CODES[4]}: checking if your cpu has neccesary instruction sets")
-            for i in loads(build_contents)['core']['cpu_flags']:
-                if i in cpu_flags:
-                    pass
-                else:
-                    print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: {i} not in cpu flags")
-                    exit(1)
-	
-        if pkg_cache_ex == False:
-            print(f"=> {ANSI_CODES[3]}info{ANSI_CODES[4]}: preparing source for {loads(build_contents)['core']['name']}@{loads(build_contents)['core']['version']}")
-            system(f"git clone {loads(build_contents)['core']['source']} {loads(build_contents)['core']['name']}")
+        with open("build", 'r') as build_file:
+            build_contents = loads(build_file.read())
+    except JSONDecodeError:
+        print(f"=> {ANSI_CODES[0]}error{ANSI_CODES[4]}: the build file is corrupt")
+        return 1
 
-        if loads(build_contents)['core']['depends'] == []:
-            print(f"=> {ANSI_CODES[3]}note{ANSI_CODES[4]}: {pname} has no dependencies so installing it")
-            pass
-        else:
-            for i in loads(build_contents)['core']['depends']:
-                print(f"=> {ANSI_CODES[2]}info{ANSI_CODES[4]}: installing dependency {i} for {pname}")
+    if build_contents['core']['cpu_flags'] != []:
+        print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: checking cpu flags")
+        for i in build_contents['core']['cpu_flags']:
+            if i in CPU_FLAGS:
+                pass
+            else:
+                print(f"=> {ANSI_CODES[0]}error{ANSI_CODES[4]}: {i} not in cpu flags")
+                return 1
+
+    if build_contents['core']['depends'] != []:
+        for i in build_contents['core']['depends']:
+            if return_if_pkg_exist(i) == False:
+                print(f"=> {ANSI_CODES[3]}note{ANSI_CODES[4]}: installing dependency {ANSI_CODES[2]}{i}{ANSI_CODES[4]} for {ANSI_CODES[2]}{pname}{ANSI_CODES[4]}")
                 install_packages(i)
 
-        if pbf == False:
-            environ['NEMESIS_PKG_BUILD_DIR'] = f"/tmp/nemesis-pkg-build/{loads(build_contents)['core']['name']}/{loads(build_contents)['core']['name']}"
-        else:
-            environ['NEMESIS_PKG_BUILD_DIR'] = f"/var/cache/nemesis-pkg/{loads(build_contents)['core']['name']}/{loads(build_contents)['core']['name']}"
-        print(f"=> {ANSI_CODES[2]}info{ANSI_CODES[4]}: installing {pname}")
-        if system(loads(build_contents)['build']['command']) == 0:
-            ctime = strftime("%D %H:%M:%S")
-            write_log(f"{ctime} PASS {pname} installed sucesfully")
-            print(f"=> {ANSI_CODES[1]}sucess{ANSI_CODES[4]}: {loads(build_contents)['core']['name']} installed sucessfully")
-            if isfile("/etc/nemesis-pkg/installed-packages.PKGLIST") == True:
-                with open("/etc/nemesis-pkg/installed-packages.PKGLIST" , 'r+', encoding="utf-8") as installed_pkgs:
-                    pkg_hmap = loads(installed_pkgs.read())
-                    pkg_hmap[f'{pname}'] = {"version": loads(build_contents)['core']['version'], "file_list": loads(build_contents)['build']['files'], "dependencies": loads(build_contents)['core']['depends'], "repo": repo_name}
-                    installed_pkgs.seek(0)
-                    installed_pkgs.write(dumps(pkg_hmap))
-                    installed_pkgs.truncate()
-                installed_pkgs.close()
+    if use_cache not in ("Y", "y", "yes"):
+        print(f"=> {ANSI_CODES[3]}note{ANSI_CODES[4]}: retreiving source")
+        print(build_contents['core']['source'])
+
+        if "codeload.github.com" and "tar.gz" in build_contents['core']['source']:
+            if system(f"curl {build_contents['core']['source']} -o {pname}.tar.gz") == 0:
+                mkdir(pname)
+                system(f"tar xvfs {pname}.tar.gz --directory {pname}")
             else:
-                with open("/etc/nemesis-pkg/installed-packages.PKGLIST" , 'w', encoding="utf-8") as installed_pkgs:
-                    pkg_hmap = {}
-                    pkg_hmap[f'{pname}'] = {"version": loads(build_contents)['core']['version'], "file_list": loads(build_contents)['build']['files'], "dependencies": loads(build_contents)['core']['depends'], "repo": repo_name}
-                    installed_pkgs.write(dumps(pkg_hmap))
-                installed_pkgs.close()
+                return 1
+        elif build_contents['core']['source'][len(build_contents['core']['source'])-1] == "t" and build_contents['core']['source'][len(build_contents['core']['source'])-2] == "i" and build_contents['core']['source'][len(build_contents['core']['source'])-3] == "g" and build_contents['core']['source'][len(build_contents['core']['source'])-4] == ".":
+            if system(f"git clone {build_contents['core']['source']} {pname}") == 0:
+                pass
+            else:
+                return 1           
         else:
-            ctime = strftime("%D %H:%M:%S")
-            write_log(f"{ctime} ERROR {pname} failed to install")
-            print(f"=> {ANSI_CODES[0]}error{ANSI_CODES[4]}: {loads(build_contents)['core']['name']} installed unsucessfully")
-            exit(1)
-    except (KeyError):
-        ctime = strftime("%D %H:%M:%S")
-        write_log(f"{ctime} ERROR {pname} failed to install")
-        print(f"=> {ANSI_CODES[0]}error{ANSI_CODES[4]}: either this package is missing or the build file is corrupt... please open a bug report to the NemesisOS Developers regarding this issue.")
+            fname = build_contents['core']['source'].split("/")[len(build_contents['core']['source'].split("/"))-1]
+            if system(f"curl {build_contents['core']['source']} -o {fname}") == 0:
+                if "tar" in fname.split("."):
+                    mkdir(pname)
+                    system(f"tar xvfs {fname} --directory {pname}")
+                else:
+                    print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: unsupported archive..")
 
-
+    environ["NEMESIS_PKG_BUILD_DIR"] = pname
+    if system(build_contents['build']['command']) == 0:
+        print(f"=> {ANSI_CODES[1]}sucess{ANSI_CODES[4]}: {ANSI_CODES[2]}{pname}{ANSI_CODES[4]} installed sucessfully")
+        write_log(strftime("%D %H:%M:%S")+f" {pname} installed sucessfully")
+        with open("/etc/nemesis-pkg/installed-packages.PKGLIST", 'r+') as ipkgdb:
+            udb = loads(ipkgdb.read())
+            ipkgdb.seek(0)
+            udb[pname] = {"version": build_contents['core']['version'], "file_list": build_contents['build']['files'], "dependencies": build_contents['core']['depends'], "repo": repo_name}
+            ipkgdb.write(dumps(udb))
+            ipkgdb.truncate()
+        ipkgdb.close()
+    else:
+        print(f"=> {ANSI_CODES[0]}error{ANSI_CODES[4]}: {ANSI_CODES[2]}{pname}{ANSI_CODES[4]} not installed")
+        write_log(strftime("%D %H:%M:%S")+f" {pname} installed unsucessfully")
+             
 def list_installed():
     print(f"=> {ANSI_CODES[3]}note{ANSI_CODES[4]}: this is the list of all installed packages")
     try:
@@ -370,8 +338,10 @@ def list_installed():
             pkgs = list(contents.keys())
             pkgs.sort()
             for installed_pkgs in pkgs:
-                print(f"=> {ANSI_CODES[2]}{installed_pkgs}{ANSI_CODES[4]}@{ANSI_CODES[1]}{contents[installed_pkgs]['version']}{ANSI_CODES[4]}")
-
+                if npkg_pretty == True:
+                    print(f" {ANSI_CODES[2]}{installed_pkgs}{ANSI_CODES[4]}@{ANSI_CODES[1]}{contents[installed_pkgs]['version']}{ANSI_CODES[4]}")
+                else:
+                    print(f" {installed_pkgs}@{contents[installed_pkgs]['version']}")
             ipkglist_open.close()
     except AttributeError:
         print(f"=> {ANSI_CODES[0]}error{ANSI_CODES[4]}: something went wrong")
@@ -379,7 +349,10 @@ def list_installed():
 def list_repos():
     print(f"=> {ANSI_CODES[3]}note{ANSI_CODES[4]}: the available repositories are:")
     for i in list(REPOLIST.keys()):
-        print(f"=> {ANSI_CODES[2]}{i}{ANSI_CODES[4]}")
+        if npkg_pretty == True:
+            print(f" {ANSI_CODES[2]}{i}{ANSI_CODES[4]}")
+        else:
+            print(f" {i}")
 
 def list_pkgs_from_repo(rname: str):
     if rname in list(REPOLIST.keys()):
@@ -391,7 +364,10 @@ def list_pkgs_from_repo(rname: str):
     print(f"=> {ANSI_CODES[3]}note{ANSI_CODES[4]}: showing the list of packages in {ANSI_CODES[2]}{rname}{ANSI_CODES[4]}")
     rpofile_open = open(f"/etc/nemesis-pkg/{rname}.PKGLIST" , 'r')
     for i in rpofile_open.read().splitlines():
-        print(f"=> {ANSI_CODES[2]}{i.split()[0]}{ANSI_CODES[4]}@{ANSI_CODES[1]}{i.split()[1]}{ANSI_CODES[4]}")
+        if npkg_pretty == True:
+            print(f" {ANSI_CODES[2]}{i.split()[0]}{ANSI_CODES[4]}@{ANSI_CODES[1]}{i.split()[1]}{ANSI_CODES[4]}")
+        else:
+            print(f" {i.split()[0]}@{i.split()[1]}")
 
 
 def uninstall_new(query: str):
@@ -424,6 +400,7 @@ def uninstall_new(query: str):
                 continue
             else:
                 print(f"=> {ANSI_CODES[0]}error{ANSI_CODES[4]}: {query} failed to uninstall")
+                write_log(strftime(f"%D %H:%M:%S PASS: {query} uninstalled"))
                 exit(1)
 
         installed_database.pop(query)
@@ -432,6 +409,7 @@ def uninstall_new(query: str):
         ipkgl.truncate()
         ipkgl.close()
         print(f"=> {ANSI_CODES[1]}sucess{ANSI_CODES[4]}: {query} uninstalled")
+        write_log(strftime(f"%D %H:%M:%S PASS: {query} uninstalled"))
     else:
         for i in pkg_depending_in_query:
             print(i)
@@ -487,12 +465,18 @@ def search_package(query: str):
     arr.sort()
     if arr != []:
         for matching in arr:
-            if return_if_pkg_exist(matching[0]) == True:
-                print(f"=> {ANSI_CODES[2]}{matching[0]}{ANSI_CODES[4]}@{ANSI_CODES[3]}{matching[1]}{ANSI_CODES[0]}{ANSI_CODES[1]}[installed]{ANSI_CODES[4]}")
+            if npkg_pretty == True:
+                if return_if_pkg_exist(matching[0]) == True:
+                    print(f" {ANSI_CODES[2]}{matching[0]}{ANSI_CODES[4]}@{ANSI_CODES[3]}{matching[1]}{ANSI_CODES[0]} {ANSI_CODES[1]}[installed]{ANSI_CODES[4]}")
+                else:
+                    print(f" {ANSI_CODES[2]}{matching[0]}{ANSI_CODES[4]}@{ANSI_CODES[3]}{matching[1]}{ANSI_CODES[4]}")
             else:
-                print(f"=> {ANSI_CODES[2]}{matching[0]}{ANSI_CODES[4]}@{ANSI_CODES[3]}{matching[1]}{ANSI_CODES[4]}")
+                if return_if_pkg_exist(matching[0]) == True:
+                    print(f" {matching[0]}@{matching[1]} {ANSI_CODES[1]}[installed]{ANSI_CODES[4]}")
+                else:
+                    print(f" {matching[0]}@{matching[1]}")
     else:
-        print(f"=> {ANSI_CODES[2]}warning{ANSI_CODES[4]}: nothing similar to {query}")
+        print(f"=> {ANSI_CODES[2]}warning{ANSI_CODES[4]}: nothing similar to {ANSI_CODES[2]}{query}{ANSI_CODES[4]}")
 
 def version_to_int(version: str):
     version = version.split(".")
