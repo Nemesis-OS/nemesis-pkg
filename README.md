@@ -43,3 +43,4 @@ A fast and simple package manager for Nemesis inspired from `kiss` and `pacman`.
 </a>
 
 GPL v3
+<img width=100% src="https://capsule-render.vercel.app/api?type=waving&color=66666e&height=120&section=footer"/>
