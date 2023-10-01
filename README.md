@@ -5,7 +5,7 @@
 
 **Sections:**
 
-[Usage](#usage) — [Linux](#linux) — [Windows](#windows) — [MacOS](#macos) — [BSD](#bsd) — [Minix](#minix) — [OpenIndiana](#openindiana)
+[Usage](#usage) — [Inspiration](#inspiration) — [License](#license)
 
 A fast and simple package manager for Nemesis inspired from `kiss` and `pacman`. This is completely written from scratch in pure python with no pip needed...
 
@@ -37,6 +37,8 @@ A fast and simple package manager for Nemesis inspired from `kiss` and `pacman`.
 - [`nala`](https://github.com/volitank/nala) - for the log idea
 
 <a id="license">
+
+  
 <h2>License:</h2>
 </a>
 
