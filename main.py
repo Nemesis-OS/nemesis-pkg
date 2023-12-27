@@ -116,10 +116,10 @@ def search_package(query: str):
                         old_str = old_str+j
 
                 if query not in i.split()[0]:
-                    print(f"\x1b[35;1m{arr[i]}\x1b[0m/{old_str} \x1b[32;1m{i.split()[1]}\x1b[0m")
+                    print(f"{old_str} \x1b[32;1m{i.split()[1]}\x1b[0m")
                 else:
                     nq = f"\x1b[31;1m{query}\x1b[0m"
-                    print(f"\x1b[35;1m{arr[i]}\x1b[0m/{i.split()[0].replace(query, nq)} \x1b[32;1m{i.split()[1]}\x1b[0m")
+                    print(f"{i.split()[0].replace(query, nq)} \x1b[32;1m{i.split()[1]}\x1b[0m")
                 
         except FileNotFoundError:
             print(f"=> \x1b[33;1mwarning:\x1b[0m database for repo \x1b[34;1m{get_fname(get_file_from_url(file))}\x1b[0m not found so skipping.")
