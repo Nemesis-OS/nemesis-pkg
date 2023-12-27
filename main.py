@@ -85,14 +85,43 @@ def update_database():
             print(f"=> \x1b[31;1merror:\x1b[0m downloading database for repo \x1b[33;1m{name}\x1b[0m failed")
             return 1
 
-def list_packages():
+def search_package(query: str):
     '''
-    list-
+    search_package()
     '''
+
+    for file in repos:
+        try:
+            arr = {}
+            with open(f"/etc/nemesis-pkg/{get_file_from_url(file)}", 'r') as db:
+                for pkg in db.read().splitlines():
+                    str = list(pkg.split()[0])
+                    chars = []
+                    for i in pkg.split()[0]:
+                        if i in list(query):
+                            chars.append(i)
+
+                    if len(chars) == len(query):
+                        arr[pkg] = get_fname(get_file_from_url(file))
+            db.close()
+
+            for i in arr:
+                old_str = ""
+                for j in i.split()[0]:
+                    if j in list(query):
+                        old_str = old_str+f"\x1b[31;1m{j}\x1b[0m"
+                    else:
+                        old_str = old_str+j
+
+                print(f"=> \x1b[35;1m{arr[i]}\x1b[0m/{old_str} \x1b[32;1m{i.split()[1]}\x1b[0m")
+                
+        except FileNotFoundError:
+            print(f"=> \x1b[33;1mwarning:\x1b[0m database for repo \x1b[34;1m{get_fname(get_file_from_url(file))}\x1b[0m not found so skipping.")
+            continue
         
 if __name__ == "__main__":
     try:
-        if len(argv) == 2:
+        if len(argv) >= 2:
             match argv[1]:
                 case "-h" | "--help" | "help" | "h" | "[h]elp":
                     print('''nemesis-pkg: software package manager
@@ -114,12 +143,11 @@ ACTIONS nemesis-pkg {h|i|l|s|u|U|v} [...]
                     else:
                         print("=> \x1b[31;1merror:\x1b[0m \x1b[33;1msync\x1b[0m needs to be run as superuser")
                 case "-s" | "search" | "--search" | "s" | "[s]earch":
-                    if len(argv) < 3:
-                        print("=> \x1b[34;1musage:\x1b[0m nemesis-pkg search package")
-                        print("=> \x1b[31;1merror:\x1b[0m expected \x1b[33;1m1\x1b[0m argument but got \x1b[33;1m0\x1b[0m")
-                        exit(1)
-
-                    search_package(argv[2])
+                    if len(argv) >= 3:
+                        search_package(argv[2])
+                    else:
+                        print("=> \x1b[34;1musage:\x1b[0m nemesis-pkg search \x1b[33;1mpackage\x1b[0m")
+                        print("=> \x1b[31;1merror:\x1b[0m expected \x1b[33;1m1\x1b[0m argument, got \x1b[33;1m0\x1b[0m")
                 case "l" | "list" | "--list" | "-l" | "[l]ist":
                     for i in repos:
                         try:
