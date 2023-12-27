@@ -98,7 +98,7 @@ def search_package(query: str):
                     str = list(pkg.split()[0])
                     chars = []
                     for i in pkg.split()[0]:
-                        if i in list(query):
+                        if i in list(query) and i not in chars:
                             chars.append(i)
 
                     if len(chars) == len(query):
@@ -107,13 +107,15 @@ def search_package(query: str):
 
             for i in arr:
                 old_str = ""
+                char = []
                 for j in i.split()[0]:
-                    if j in list(query):
+                    if j in list(query) and j not in char:
                         old_str = old_str+f"\x1b[31;1m{j}\x1b[0m"
+                        char.append(j)
                     else:
                         old_str = old_str+j
 
-                print(f"=> \x1b[35;1m{arr[i]}\x1b[0m/{old_str} \x1b[32;1m{i.split()[1]}\x1b[0m")
+                print(f"\x1b[35;1m{arr[i]}\x1b[0m/{old_str} \x1b[32;1m{i.split()[1]}\x1b[0m")
                 
         except FileNotFoundError:
             print(f"=> \x1b[33;1mwarning:\x1b[0m database for repo \x1b[34;1m{get_fname(get_file_from_url(file))}\x1b[0m not found so skipping.")
@@ -157,7 +159,6 @@ ACTIONS nemesis-pkg {h|i|l|s|u|U|v} [...]
                             db.close()
                         except FileNotFoundError:
                             continue
-                    
                 case _:
                     print("=> \x1b[31;1merror:\x1b[0m invalid choice")
         else:
