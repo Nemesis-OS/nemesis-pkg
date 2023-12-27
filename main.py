@@ -155,14 +155,14 @@ ACTIONS nemesis-pkg {h|i|l|s|u|U|v} [...]
                         print("=> \x1b[34;1musage:\x1b[0m nemesis-pkg search \x1b[33;1mpackage\x1b[0m")
                         print("=> \x1b[31;1merror:\x1b[0m expected \x1b[33;1m1\x1b[0m argument, got \x1b[33;1m0\x1b[0m")
                 case "l" | "list" | "--list" | "-l" | "[l]ist":
-                    for i in repos:
-                        try:
-                            with open(f"/etc/nemesis-pkg/{get_file_from_url(i)}") as db:
-                                for j in db.read().splitlines():
-                                    print(j)
-                            db.close()
-                        except FileNotFoundError:
-                            continue
+                    try:
+                        with open(f"/etc/nemesis-pkg/installed-packages.toml") as db:
+                            contents = loads(db.read())
+                            for i in contents:
+                                print(f'{i} \x1b[32;1m{contents[i]["version"]}\x1b[0m')      
+                        db.close()
+                    except FileNotFoundError:
+                        print("=> \x1b[31;1merror\x1b[0m: \x1b[33;1minstalled-packages.toml:\x1b[0m no such file or directory")
                 case _:
                     print("=> \x1b[31;1merror:\x1b[0m invalid choice")
         else:
