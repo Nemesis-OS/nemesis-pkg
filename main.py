@@ -4,14 +4,41 @@ nemesis-pkg: a tiny and simple package manager for NemesisOS
 '''
 
 from toml import loads, dumps
+from toml.decoder import TomlDecodeError
 from os import mkdir, getenv
 from os.path import isfile, isdir
-from sys import argv, exit
+from subprocess import check_output, CalledProcessError
+from sys import argv, exit, stdout
 from requests import get
 from requests.exceptions import MissingSchema, ConnectionError, ConnectTimeout
 
 repos = ['https://raw.githubusercontent.com/Nemesis-OS/packages-release/main/release.PKGLIST', 'https://raw.githubusercontent.com/Nemesis-OS/packages-security/main/security.PKGLIST']
+accept_nonfree = False # proprietary programs wont be installed
+colors = stdout.isatty()
 
+def parse_config():
+    '''
+    parse_config() -> retrive npkg config
+    '''
+    global colors
+    try:
+        with open("/etc/nemesis-pkg.conf", 'r') as npkg_config:
+            config = loads(npkg_config.read())
+
+            if "colors" in list(config.keys()):
+                if config["colors"] == True and colors == True:
+                    pass
+                else:
+                    colors = False
+            
+    except (FileNotFoundError, TomlDecodeError):
+        if colors == True:
+            print("=> \x1b[33;1mwarning:\x1b[0m using fallback config as config not found or your config is invalid")
+        else:
+            print("=> warning: using fallback config as config not found or your config is invalid")
+        
+parse_config()
+        
 def get_file_from_url(url: str):
     '''
     get_file_from_url("https://random.com/rando.zip") -> rando.zip
@@ -41,25 +68,15 @@ def is_root():
 
     return False
 
-def use_config():
+def get_256sum(file: str):
     '''
-    use_config(): this function retrieves config otherwise fallback is used
+    get_256sum(file) -> returns the hash of the file
     '''
-    global repos
-    if isfile("/etc/nemesis-pkg.conf"):
-        try:
-            with open("/etc/nemesis-pkg.conf") as a:
-                config = a.read()
-                config = loads(config)
 
-                if "repos" in list(config.keys()):
-                    repos = config["repos"]
-
-            a.close()
-        except KeyError:
-            print("=> CONFIG ERROR:")
+    if isfile(file) == True:
+        return check_output(['sha256sum', file]).decode('utf-8').split()[0]
     else:
-        print("=> \x1b[33;1mwarning:\x1b[0m using fallback config")
+        raise FileNotFoundError
 
 def update_database():
     '''
@@ -69,7 +86,10 @@ def update_database():
     # use repositories locally
     for i in repos:
         name = get_fname(get_file_from_url(i))
-        print(f"=> \x1b[34;1minfo:\x1b[0m downloading database for repo \x1b[33;1m{name}\x1b[0m")
+        if colors == True:
+            print(f"=> \x1b[34;1minfo:\x1b[0m downloading database for repo \x1b[33;1m{name}\x1b[0m")
+        else:
+            print(f"=> info: downloading database for repo {name}")
         try:
             contents = get(i).content.decode('utf-8')
 
@@ -79,10 +99,17 @@ def update_database():
             with open(f"/etc/nemesis-pkg/{name}.PKGLIST", 'w') as db:
                 db.write(contents)
             db.close()
-            print(f"=> \x1b[32;1msucess:\x1b[0m database fore repo \x1b[33;1m{name}\x1b[0m is upto date")
+
+            if colors:
+                print(f"=> \x1b[32;1msuccess:\x1b[0m database for repo \x1b[33;1m{name}\x1b[0m is upto date")
+            else:
+                print(f"=> success: database for repo {name} is upto date")
 
         except (MissingSchema, ConnectTimeout, ConnectionAbortedError, ConnectionRefusedError, ConnectionResetError, ConnectionError):
-            print(f"=> \x1b[31;1merror:\x1b[0m downloading database for repo \x1b[33;1m{name}\x1b[0m failed")
+            if color:
+                print(f"=> \x1b[31;1merror:\x1b[0m downloading database for repo \x1b[33;1m{name}\x1b[0m failed")
+            else:
+                print(f"=> error: downloading database for repo {name} failed")
             return 1
 
 def search_package(query: str):
@@ -108,29 +135,57 @@ def search_package(query: str):
             for i in arr:
                 old_str = ""
                 char = []
-                for j in i.split()[0]:                    
-                    if j in list(query) and j not in char:
-                        old_str = old_str+f"\x1b[31;1m{j}\x1b[0m"
-                        char.append(j)
-                    else:
-                        old_str = old_str+j
-
-                if query not in i.split()[0]:
-                    print(f"{old_str} \x1b[32;1m{i.split()[1]}\x1b[0m")
-                else:
-                    nq = f"\x1b[31;1m{query}\x1b[0m"
-                    print(f"{i.split()[0].replace(query, nq)} \x1b[32;1m{i.split()[1]}\x1b[0m")
                 
+                if colors == True:
+                    for j in i.split()[0]:
+                        if j in list(query) and j not in char:
+                            old_str = old_str+f"\x1b[31;1m{j}\x1b[0m"
+                            char.append(j)
+                        else:
+                            old_str = old_str+j
+
+                    if query not in i.split()[0]:
+                        if is_package_installed(i.split()[0]):
+                            print(f"{old_str} \x1b[32;1m{i.split()[1]}\x1b[0m \x1b[34;1m[installed]\x1b[0m")
+                        else:
+                            print(f"{old_str} \x1b[32;1m{i.split()[1]}\x1b[0m")
+                    else:
+                        nq = f"\x1b[31;1m{query}\x1b[0m"
+                        print(f"{i.split()[0].replace(query, nq)} \x1b[32;1m{i.split()[1]}\x1b[0m")
+                else:
+                    print(i)
         except FileNotFoundError:
-            print(f"=> \x1b[33;1mwarning:\x1b[0m database for repo \x1b[34;1m{get_fname(get_file_from_url(file))}\x1b[0m not found so skipping.")
+            if colors == True:
+                print(f"=> \x1b[33;1mwarning:\x1b[0m database for repo \x1b[34;1m{get_fname(get_file_from_url(file))}\x1b[0m not found so skipping.")
+            else:
+                print(f"=> warning: database for repo {get_fname(get_file_from_url(file))} not found so skipping.")
             continue
-        
+
+def is_package_installed(pkg: str):
+    '''
+    is_package_installed(pkg) -> True/False
+
+    If package is installed then return True otherwise False
+    '''
+
+    try:
+        with open("/etc/nemesis-pkg/installed-packages.toml", 'r') as ipkg:
+            if pkg in list(loads(ipkg.read()).keys()): # package has been found
+                ipkg.close()
+                return True
+        ipkg.close()
+    except FileNotFoundError:
+        pass
+    
+    return False # package has not been found
+
 if __name__ == "__main__":
     try:
         if len(argv) >= 2:
             match argv[1]:
                 case "-h" | "--help" | "help" | "h" | "[h]elp":
-                    print('''nemesis-pkg: software package manager
+                    if colors:
+                        print('''nemesis-pkg: software package manager
 ACTIONS nemesis-pkg {h|i|l|s|u|U|v} [...]
                     
   [\x1b[31;1mh\x1b[0m]\x1b[1melp\x1b[0m\tshow this help message
@@ -140,33 +195,70 @@ ACTIONS nemesis-pkg {h|i|l|s|u|U|v} [...]
   [\x1b[31;1mu\x1b[0m]\x1b[1mpdate\x1b[0m\tupdate the package database
   [\x1b[31;1mU\x1b[0m]\x1b[1mpgrade\x1b[0m\tupgrade all installed packages
   [\x1b[31;1mv\x1b[0m]\x1b[1mersion\x1b[0m\tprint the program version
-                    ''')
+                        ''')
+                    else:
+                        print('''nemesis-pkg: software package manager
+ACTIONS nemesis-pkg {h|i|l|s|u|U|v} [...]
+                    
+  [h]elp\tshow this help message
+  [i]nstall\x1b[0m\tinstall the given package
+  [l]mist\x1b[0m\tlist all installed packages
+  [s]earch\x1b[0m\tsearch for the given package
+  [u]pdate\x1b[0m\tupdate the package database
+  [U]pgrade\x1b[0m\tupgrade all installed packages
+  [v]ersion\x1b[0m\tprint the program version
+                        ''')
+                        
                 case "-v" | "--version" | "version" | "v" | "[v]ersion":
                     print("nemesis-pkg 0.1")
                 case "-u" | "update" | "--update" | "u" | "[u]pdate":
                     if is_root():
                         update_database()
                     else:
-                        print("=> \x1b[31;1merror:\x1b[0m \x1b[33;1msync\x1b[0m needs to be run as superuser")
+                        if colors:
+                            print("=> \x1b[31;1merror:\x1b[0m \x1b[33;1msync\x1b[0m needs to be run as superuser")
+                        else:
+                            print("=> errors: sync needs to be run as superuser")
                 case "-s" | "search" | "--search" | "s" | "[s]earch":
                     if len(argv) >= 3:
                         search_package(argv[2])
                     else:
-                        print("=> \x1b[34;1musage:\x1b[0m nemesis-pkg search \x1b[33;1mpackage\x1b[0m")
-                        print("=> \x1b[31;1merror:\x1b[0m expected \x1b[33;1m1\x1b[0m argument, got \x1b[33;1m0\x1b[0m")
+                        if colors:
+                            print("=> \x1b[34;1musage:\x1b[0m nemesis-pkg search \x1b[33;1mpackage\x1b[0m")
+                            print("=> \x1b[31;1merror:\x1b[0m expected \x1b[33;1m1\x1b[0m argument, got \x1b[33;1m0\x1b[0m")
+                        else:
+                            print("=> usage: nemesis-pkg search package")
+                            print("=> error: expected 1 argument, got 0")
+                            
                 case "l" | "list" | "--list" | "-l" | "[l]ist":
                     try:
                         with open(f"/etc/nemesis-pkg/installed-packages.toml") as db:
                             contents = loads(db.read())
                             for i in contents:
-                                print(f'{i} \x1b[32;1m{contents[i]["version"]}\x1b[0m')      
+                                if colors:
+                                    print(f'{i} \x1b[32;1m{contents[i]["version"]}\x1b[0m')
+                                else:
+                                    print(f'{i} {contents[i]["version"]}')
                         db.close()
                     except FileNotFoundError:
-                        print("=> \x1b[31;1merror\x1b[0m: \x1b[33;1minstalled-packages.toml:\x1b[0m no such file or directory")
+                        if colors:
+                            print("=> \x1b[31;1merror\x1b[0m: \x1b[33;1minstalled-packages.toml:\x1b[0m no such file or directory")
+                        else:
+                            print("=> error: installed-packages.toml: no such file or directory")
                 case _:
-                    print("=> \x1b[31;1merror:\x1b[0m invalid choice")
+                    if colors:
+                        print("=> \x1b[31;1merror:\x1b[0m invalid choice")
+                    else:
+                        print("=> error: invalid choice")
         else:
-            print("=> \x1b[31;1merror:\x1b[0m nemesis-pkg recieved no arguments")
+            if colors:
+                print("=> \x1b[31;1merror:\x1b[0m nemesis-pkg recieved no arguments")
+            else:
+                print("=> error: nemesis-pkg recieved no arguments")
     except KeyboardInterrupt:
-        print("=> \x1b[31;1merror:\x1b[0m \x1b[33;1mControl-C\x1b[0m pressed so exiting")
+        if colors:
+            print("=> \x1b[31;1merror:\x1b[0m \x1b[33;1mControl-C\x1b[0m pressed so exiting")
+        else:
+            print("=> error: Control-C pressed so exiting")
+            
         exit(1)
