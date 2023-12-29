@@ -1,80 +1,50 @@
+#/usr/bin/python
 '''
-genconfig-npkg: a tool to generate nemesis-pkg config
+npkg-genconfig: a simple config generator for nemesis-pkg
 '''
-#!/usr/bin/python3
-import sys
-from subprocess import check_output
-from shutil import copy
-from os import chdir, mkdir, getuid
-from os.path import isfile, isdir
-from json import dumps
 
-ANSI_CODES = ["\x1b[31m", "\x1b[32m", "\x1b[33m" , "\x1b[34m" , "\x1b[0m"]
-REPOS = []
-CHECK_NECESSARY_FILES = True
-PRESERVE_BUILD_FILES = True
-CPU_FLAGS = []
-'''
-This function only generates the config files and everything
-'''
+from os import getenv1
+from os.path import isfile
+from toml import dumps, loads
+from sys import exit
+
+config = {'colors': True,
+          'accept_nonfree': False,
+          'cflags': "-march=native -O3 -pipe",
+          'cxxflags': "-march=native -O3 -pipe",
+          'repos': ['https://raw.githubusercontent.com/Nemesis-OS/packages-release/main/release.PKGLIST']}
+
+def npkg_input(str, choices):
+    '''
+    npkg_input(str, choices): input(str choices)
+    '''
+    while True:
+        a = input(str)
+        if a in choices:
+            return a
 try:
     if __name__ == "__main__":
-        if getuid() != 0:
-            print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: user is not root")
-            sys.exit(1)
-        print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: finding if config.json found..")
-        if isdir("/etc/nemesis-pkg/") is False:
-            print(f"{ANSI_CODES[2]}warning{ANSI_CODES[4]}: /etc/nemesis-pkg not found..")
-            mkdir("/etc/nemesis-pkg")
-        chdir("/etc/nemesis-pkg/")
-        if isfile("config.json") is True:
-            print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: saving a copy of your existing config..")
-            copy("config.json", "config.json.bak")
-        else:
-            pass
-        print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: fetching cpu flags.")
-        CPU_FLAGS = check_output('lscpu').decode('utf-8').splitlines()
-        for i in CPU_FLAGS:
-            if i.split()[0] == "Flags:":
-                CPU_FLAGS = i.split()
-                break
-        CPU_FLAGS.pop(0)
-        if not CPU_FLAGS:
-            print(f"{ANSI_CODES[0]}error{ANSI_CODES[4]}: cpu flag generation failed")
-            sys.exit(1)
-        else:
-            print(f"{ANSI_CODES[1]}sucess{ANSI_CODES[4]}: cpu flags made sucessfully")
-            yn = input(f"{ANSI_CODES[3]}info{ANSI_CODES[4]}: do you want to view cpu flags?[y/n] ")
-            if yn in ("y", "Y"):
-                print(CPU_FLAGS)
-        print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: making repos..")
-        print(f"{ANSI_CODES[3]}info{ANSI_CODES[4]}: release and security repo enabled..")
-        REPOS = [
-        ["https://raw.githubusercontent.com/Nemesis-OS/packages-release/main/release.PKGLIST",
-         "release.PKGLIST",
-         "release",
-         "https://raw.githubusercontent.com/Nemesis-OS/packages-release/main/"],
-        ["https://raw.githubusercontent.com/Nemesis-OS/packages-security/main/security.PKGLIST",
-         "security.PKGLIST",
-         "security-updates",
-         "https://raw.githubusercontent.com/Nemesis-OS/packages-security/main/"]
-        ]
-        enable_community = input(f"{ANSI_CODES[3]}input{ANSI_CODES[4]}: enable ncr repo?[y/n] ")
-        if enable_community in ("y", "Y"):
-            REPOS.append(
-                [
-                    "https://raw.githubusercontent.com/Nemesis-OS/packages-community/main/community.PKGLIST",  # pylint: disable=line-too-long
-                          "community.PKGLIST",
-                          "community",
-                          "https://raw.githubusercontent.com/Nemesis-OS/packages-community/main/"])
-        print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: repository was configured")
-    print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: generating config file")
-    print(f"{ANSI_CODES[3]}note{ANSI_CODES[4]}: config generated so saving it")
-    with open("config.json", 'w', encoding='utf-8') as cfg_file:
-        hmap = {'REPOS': REPOS, 'CPU_FLAGS': CPU_FLAGS, 'SAVE_BUILD_FILES': PRESERVE_BUILD_FILES}
-        cfg_file.write(dumps(hmap))
-    cfg_file.close()
-    print(f"{ANSI_CODES[1]}sucess{ANSI_CODES[4]}: config generated sucessfully")
+        if getenv("USER") != "root":
+            print("=> \x1b[31;1merror:\x1b[0m user is not \x1b[33;1mroot\x1b[0m")
+            exit(1)
+
+        use_cols = npkg_input("=> \x1b[35;1minput:\x1b[0m use colors for npkg? [\x1b[32;1my\x1b[0m/\x1b[31;1mn\x1b[0m] ", ["y", "n"])
+        
+        if use_cols == "n":
+            config["colors"] = False
+
+        enable_nonfoss = npkg_input("=> \x1b[35;1minput:\x1b[0m unfree software can hinder the user's freedom; permit building unfree packages? [\x1b[32;1my\x1b[0m/\x1b[31;1mn\x1b[0m] ", ["y", "n"])
+
+        if enable_nonfoss == "y":
+            config["accept_nonfree"] = True
+
+        with open("/etc/nemesis-pkg.conf", 'w', encoding="utf-8") as npkg_config:
+            npkg_config.write(str(dumps(config)))
+        npkg_config.close()
+
+        view_cf = npkg_input("=> \x1b[35;1minput:\x1b[0m do you prefer to view or edit the compiler flags for C and C++? [\x1b[31;1m\x1b[0m/\x1b[32;1me\x1b[0m] ", ["v", "e"])
+        if view_cf == "v":
+            print(f"=> \x1b[34;1minfo:\x1b[0m compiler flags: \x1b[33;1m{config['cflags']}\x1b[0m")
 except KeyboardInterrupt:
-    print(f" {ANSI_CODES[0]}error{ANSI_CODES[4]}: user pressed ctrl-c so exiting. ")
-    sys.exit(1)
+    print(" => \x1b[31;1merror:\x1b[0m \x1b[33;1mControl-C\x1b[0m pressed so exiting")
+    exit(1)
