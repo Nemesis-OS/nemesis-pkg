@@ -3,42 +3,46 @@
 nemesis-pkg: a tiny and simple package manager for NemesisOS
 '''
 
-from toml import loads, dumps
-from toml.decoder import TomlDecodeError
 from os import mkdir, getenv
 from os.path import isfile, isdir
-from subprocess import check_output, CalledProcessError
-from sys import argv, exit, stdout
+from subprocess import check_output
+from sys import argv, stdout, exit # pylint: disable=redefined-builtin
 from requests import get
-from requests.exceptions import MissingSchema, ConnectionError, ConnectTimeout
+from requests.exceptions import MissingSchema, ConnectTimeout
+from toml import loads
+from toml.decoder import TomlDecodeError
 
-repos = ['https://raw.githubusercontent.com/Nemesis-OS/packages-release/main/release.PKGLIST', 'https://raw.githubusercontent.com/Nemesis-OS/packages-security/main/security.PKGLIST']
-accept_nonfree = False # proprietary programs wont be installed
-colors = stdout.isatty()
+repos = ['https://raw.githubusercontent.com/Nemesis-OS/packages-release/main/release.PKGLIST'] # pylint: disable=line-too-long
+ACCEPT_NONFREE = False # proprietary programs wont be installed by default
+colors = stdout.isatty() # use colors only if it is a tty or not
 
 def parse_config():
     '''
     parse_config() -> retrive npkg config
     '''
-    global colors
+    global colors, ACCEPT_NONFREE # pylint: disable=global-statement
     try:
-        with open("/etc/nemesis-pkg.conf", 'r') as npkg_config:
+        with open("/etc/nemesis-pkg.conf", 'r', encoding='utf-8') as npkg_config:
             config = loads(npkg_config.read())
 
             if "colors" in list(config.keys()):
-                if config["colors"] == True and colors == True:
+                if config["colors"] is True and colors is True:
                     pass
                 else:
                     colors = False
-            
+
+            if "accept_nonfree" in list(config.keys()):
+                if config["accept_nonfree"] in True or config["accept_nonfree"] in False:
+                    ACCEPT_NONFREE = config["accept_nonfree"]
+                    
     except (FileNotFoundError, TomlDecodeError):
-        if colors == True:
-            print("=> \x1b[33;1mwarning:\x1b[0m using fallback config as config not found or your config is invalid")
+        if colors is True:
+            print("=> \x1b[33;1mwarning:\x1b[0m using fallback config as config not found or your config is invalid") # pylint: disable=line-too-long
         else:
             print("=> warning: using fallback config as config not found or your config is invalid")
-        
+
 parse_config()
-        
+
 def get_file_from_url(url: str):
     '''
     get_file_from_url("https://random.com/rando.zip") -> rando.zip
@@ -68,17 +72,15 @@ def is_root():
 
     return False
 
-def get_256sum(file: str):
+def get_256sum(file: str): # pylint: disable=inconsistent-return-statements
     '''
     get_256sum(file) -> returns the hash of the file
     '''
 
-    if isfile(file) == True:
+    if isfile(file):
         return check_output(['sha256sum', file]).decode('utf-8').split()[0]
-    else:
-        raise FileNotFoundError
 
-def update_database():
+def update_database(): # pylint: disable=inconsistent-return-statements
     '''
     update_database(): updates repositories database of nemesis-pkg
     '''
@@ -86,33 +88,33 @@ def update_database():
     # use repositories locally
     for i in repos:
         name = get_fname(get_file_from_url(i))
-        if colors == True:
-            print(f"=> \x1b[34;1minfo:\x1b[0m downloading database for repo \x1b[33;1m{name}\x1b[0m")
+        if colors:
+            print(f"=> \x1b[34;1minfo:\x1b[0m downloading database for repo \x1b[33;1m{name}\x1b[0m") # pylint: disable=line-too-long
         else:
             print(f"=> info: downloading database for repo {name}")
         try:
-            contents = get(i).content.decode('utf-8')
+            contents = get(i, timeout=60).content.decode('utf-8')
 
-            if isdir("/etc/nemesis-pkg") == False:
+            if isdir("/etc/nemesis-pkg") is False:
                 mkdir("/etc/nemesis-pkg")
-                
-            with open(f"/etc/nemesis-pkg/{name}.PKGLIST", 'w') as db:
-                db.write(contents)
-            db.close()
+
+            with open(f"/etc/nemesis-pkg/{name}.PKGLIST", 'w', encoding="utf-8") as repo_file: # pylint: disable=redefined-outer-name
+                repo_file.write(contents)
+            repo_file.close()
 
             if colors:
-                print(f"=> \x1b[32;1msuccess:\x1b[0m database for repo \x1b[33;1m{name}\x1b[0m is upto date")
+                print(f"=> \x1b[32;1msuccess:\x1b[0m database for repo \x1b[33;1m{name}\x1b[0m is upto date") # pylint: disable=line-too-long
             else:
                 print(f"=> success: database for repo {name} is upto date")
 
-        except (MissingSchema, ConnectTimeout, ConnectionAbortedError, ConnectionRefusedError, ConnectionResetError, ConnectionError):
-            if color:
-                print(f"=> \x1b[31;1merror:\x1b[0m downloading database for repo \x1b[33;1m{name}\x1b[0m failed")
+        except (MissingSchema, ConnectTimeout, ConnectionAbortedError, ConnectionRefusedError, ConnectionResetError, ConnectionError): # pylint: disable=line-too-long
+            if colors:
+                print(f"=> \x1b[31;1merror:\x1b[0m downloading database for repo \x1b[33;1m{name}\x1b[0m failed") # pylint: disable=line-too-long
             else:
                 print(f"=> error: downloading database for repo {name} failed")
             return 1
 
-def search_package(query: str):
+def search_package(query: str): # pylint: disable=too-many-branches
     '''
     search_package()
     '''
@@ -120,9 +122,8 @@ def search_package(query: str):
     for file in repos:
         try:
             arr = {}
-            with open(f"/etc/nemesis-pkg/{get_file_from_url(file)}", 'r') as db:
-                for pkg in db.read().splitlines():
-                    str = list(pkg.split()[0])
+            with open(f"/etc/nemesis-pkg/{get_file_from_url(file)}", 'r', encoding="utf-8") as pkglist: # pylint: disable=line-too-long
+                for pkg in pkglist.read().splitlines():
                     chars = []
                     for i in pkg.split()[0]:
                         if i in list(query) and i not in chars:
@@ -130,13 +131,13 @@ def search_package(query: str):
 
                     if len(chars) == len(query):
                         arr[pkg] = get_fname(get_file_from_url(file))
-            db.close()
+                pkglist.close()
 
             for i in arr:
                 old_str = ""
                 char = []
-                
-                if colors == True:
+
+                if colors:
                     for j in i.split()[0]:
                         if j in list(query) and j not in char:
                             old_str = old_str+f"\x1b[31;1m{j}\x1b[0m"
@@ -146,19 +147,19 @@ def search_package(query: str):
 
                     if query not in i.split()[0]:
                         if is_package_installed(i.split()[0]):
-                            print(f"{old_str} \x1b[32;1m{i.split()[1]}\x1b[0m \x1b[34;1m[installed]\x1b[0m")
+                            print(f"{old_str} \x1b[32;1m{i.split()[1]}\x1b[0m \x1b[34;1m[installed]\x1b[0m") # pylint: disable=line-too-long
                         else:
                             print(f"{old_str} \x1b[32;1m{i.split()[1]}\x1b[0m")
                     else:
-                        nq = f"\x1b[31;1m{query}\x1b[0m"
-                        print(f"{i.split()[0].replace(query, nq)} \x1b[32;1m{i.split()[1]}\x1b[0m")
+                        new = f"\x1b[31;1m{query}\x1b[0m"
+                        print(f"{i.split()[0].replace(query, new)} \x1b[32;1m{i.split()[1]}\x1b[0m")
                 else:
                     print(i)
         except FileNotFoundError:
-            if colors == True:
-                print(f"=> \x1b[33;1mwarning:\x1b[0m database for repo \x1b[34;1m{get_fname(get_file_from_url(file))}\x1b[0m not found so skipping.")
+            if colors:
+                print(f"=> \x1b[33;1mwarning:\x1b[0m database for repo \x1b[34;1m{get_fname(get_file_from_url(file))}\x1b[0m not found so skipping.") # pylint: disable=line-too-long
             else:
-                print(f"=> warning: database for repo {get_fname(get_file_from_url(file))} not found so skipping.")
+                print(f"=> warning: database for repo {get_fname(get_file_from_url(file))} not found so skipping.") # pylint: disable=line-too-long
             continue
 
 def is_package_installed(pkg: str):
@@ -169,14 +170,14 @@ def is_package_installed(pkg: str):
     '''
 
     try:
-        with open("/etc/nemesis-pkg/installed-packages.toml", 'r') as ipkg:
+        with open("/etc/nemesis-pkg/installed-packages.toml", 'r', encoding='utf-8') as ipkg:
             if pkg in list(loads(ipkg.read()).keys()): # package has been found
                 ipkg.close()
                 return True
         ipkg.close()
     except FileNotFoundError:
         pass
-    
+
     return False # package has not been found
 
 if __name__ == "__main__":
@@ -208,7 +209,7 @@ ACTIONS nemesis-pkg {h|i|l|s|u|U|v} [...]
   [U]pgrade\x1b[0m\tupgrade all installed packages
   [v]ersion\x1b[0m\tprint the program version
                         ''')
-                        
+
                 case "-v" | "--version" | "version" | "v" | "[v]ersion":
                     print("nemesis-pkg 0.1")
                 case "-u" | "update" | "--update" | "u" | "[u]pdate":
@@ -216,7 +217,7 @@ ACTIONS nemesis-pkg {h|i|l|s|u|U|v} [...]
                         update_database()
                     else:
                         if colors:
-                            print("=> \x1b[31;1merror:\x1b[0m \x1b[33;1msync\x1b[0m needs to be run as superuser")
+                            print("=> \x1b[31;1merror:\x1b[0m \x1b[33;1msync\x1b[0m needs to be run as superuser") # pylint: disable=line-too-long
                         else:
                             print("=> errors: sync needs to be run as superuser")
                 case "-s" | "search" | "--search" | "s" | "[s]earch":
@@ -224,25 +225,25 @@ ACTIONS nemesis-pkg {h|i|l|s|u|U|v} [...]
                         search_package(argv[2])
                     else:
                         if colors:
-                            print("=> \x1b[34;1musage:\x1b[0m nemesis-pkg search \x1b[33;1mpackage\x1b[0m")
-                            print("=> \x1b[31;1merror:\x1b[0m expected \x1b[33;1m1\x1b[0m argument, got \x1b[33;1m0\x1b[0m")
+                            print("=> \x1b[34;1musage:\x1b[0m nemesis-pkg search \x1b[33;1mpackage\x1b[0m") # pylint: disable=line-too-long
+                            print("=> \x1b[31;1merror:\x1b[0m expected \x1b[33;1m1\x1b[0m argument, got \x1b[33;1m0\x1b[0m") # pylint: disable=line-too-long
                         else:
                             print("=> usage: nemesis-pkg search package")
                             print("=> error: expected 1 argument, got 0")
-                            
+
                 case "l" | "list" | "--list" | "-l" | "[l]ist":
                     try:
-                        with open(f"/etc/nemesis-pkg/installed-packages.toml") as db:
-                            contents = loads(db.read())
-                            for i in contents:
+                        with open("/etc/nemesis-pkg/installed-packages.toml", encoding="utf-8") as ipkgdb: # pylint: disable=line-too-long
+                            file_contents = loads(ipkgdb.read())
+                            for installed in file_contents:
                                 if colors:
-                                    print(f'{i} \x1b[32;1m{contents[i]["version"]}\x1b[0m')
+                                    print(f'{installed} \x1b[32;1m{file_contents[installed]["version"]}\x1b[0m') # pylint: disable=line-too-long
                                 else:
-                                    print(f'{i} {contents[i]["version"]}')
-                        db.close()
+                                    print(f'{installed} {file_contents[installed]["version"]}') # pylint: disable=line-too-long
+                        ipkgdb.close()
                     except FileNotFoundError:
                         if colors:
-                            print("=> \x1b[31;1merror\x1b[0m: \x1b[33;1minstalled-packages.toml:\x1b[0m no such file or directory")
+                            print("=> \x1b[31;1merror\x1b[0m: \x1b[33;1minstalled-packages.toml:\x1b[0m no such file or directory") # pylint: disable=line-too-long
                         else:
                             print("=> error: installed-packages.toml: no such file or directory")
                 case _:
@@ -260,5 +261,5 @@ ACTIONS nemesis-pkg {h|i|l|s|u|U|v} [...]
             print("=> \x1b[31;1merror:\x1b[0m \x1b[33;1mControl-C\x1b[0m pressed so exiting")
         else:
             print("=> error: Control-C pressed so exiting")
-            
+
         exit(1)
