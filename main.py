@@ -17,7 +17,7 @@ ACCEPT_NONFREE = False # proprietary programs wont be installed by default
 colors = stdout.isatty() # use colors only if it is a tty or not
 
 def parse_config():
-    '''
+    ''' 
     parse_config() -> retrive npkg config
     '''
     global colors, ACCEPT_NONFREE # pylint: disable=global-statement
@@ -32,9 +32,21 @@ def parse_config():
                     colors = False
 
             if "accept_nonfree" in list(config.keys()):
-                if config["accept_nonfree"] in True or config["accept_nonfree"] in False:
+                if config["accept_nonfree"] is True or config["accept_nonfree"] is False:
                     ACCEPT_NONFREE = config["accept_nonfree"]
-                    
+        npkg_config.close()
+
+        # RETRIEVE FROM ENV VARS ALSO..
+        # NPKG_ACCEPT_NONFREE -> 0/1
+        # NPKG_USE_COLORS -> 0/1
+
+        if getenv("NPKG_ACCEPT_NONFREE") is not None and getenv("NPKG_ACCEPT_NONFREE") == 1:
+            ACCEPT_NONFREE = True
+
+        # colors are enabled by default anyways
+        if getenv("NPKG_USE_COLORS") is not None and int(getenv("NPKG_USE_COLORS")) == 0 and colors:
+            colors = False
+
     except (FileNotFoundError, TomlDecodeError):
         if colors is True:
             print("=> \x1b[33;1mwarning:\x1b[0m using fallback config as config not found or your config is invalid") # pylint: disable=line-too-long
