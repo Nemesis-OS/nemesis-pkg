@@ -155,10 +155,9 @@ def search_package(query: str): # pylint: disable=too-many-branches
 
                 pkglist.close()
 
-            for i in list(arr.items()):
+            for i in list(arr.keys()):
                 old_str = ""
                 char = []
-
                 if colors:
                     for j in i:
                         if j in list(query) and j not in char:
