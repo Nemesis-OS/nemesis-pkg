@@ -14,13 +14,14 @@ from toml.decoder import TomlDecodeError
 
 repos = ['https://raw.githubusercontent.com/Nemesis-OS/packages-release/main/release.PKGLIST'] # pylint: disable=line-too-long
 ACCEPT_NONFREE = False # proprietary programs wont be installed by default
+DISABLE_HASHCHECK = False # hash checking will be enabled by default
 colors = stdout.isatty() # use colors only if it is a tty or not
 
 def parse_config():
     ''' 
     parse_config() -> retrive npkg config
     '''
-    global colors, ACCEPT_NONFREE # pylint: disable=global-statement
+    global colors, ACCEPT_NONFREE, DISABLE_HASHCHECK # pylint: disable=global-statement
     try:
         with open("/etc/nemesis-pkg.conf", 'r', encoding='utf-8') as npkg_config:
             config = loads(npkg_config.read())
@@ -39,6 +40,7 @@ def parse_config():
         # RETRIEVE FROM ENV VARS ALSO..
         # NPKG_ACCEPT_NONFREE -> 0/1
         # NPKG_USE_COLORS -> 0/1
+        # NPKG_DISABLE_HASHCHECKS -> 0/1
 
         if getenv("NPKG_ACCEPT_NONFREE") is not None and getenv("NPKG_ACCEPT_NONFREE") == 1:
             ACCEPT_NONFREE = True
@@ -46,6 +48,10 @@ def parse_config():
         # colors are enabled by default anyways
         if getenv("NPKG_USE_COLORS") is not None and int(getenv("NPKG_USE_COLORS")) == 0 and colors:
             colors = False
+
+        # hash verification is enabled so this setting can disable it
+        if getenv("NPKG_DISABLE_HASHCHECKS") is not None and int(getenv("NPKG_DISABLE_HASHCHECKS")) == 1: # pylint: disable=line-too-long
+            DISABLE_HASHCHECK = True
 
     except (FileNotFoundError, TomlDecodeError):
         if colors is True:
@@ -135,38 +141,50 @@ def search_package(query: str): # pylint: disable=too-many-branches
         try:
             arr = {}
             with open(f"/etc/nemesis-pkg/{get_file_from_url(file)}", 'r', encoding="utf-8") as pkglist: # pylint: disable=line-too-long
-                for pkg in pkglist.read().splitlines():
+                db_contents = loads(pkglist.read())
+                for pkg in list(sorted(list(db_contents.keys()))):
                     chars = []
-                    for i in pkg.split()[0]:
+                    for i in pkg:
                         if i in list(query) and i not in chars:
                             chars.append(i)
 
                     if len(chars) == len(query):
-                        arr[pkg] = get_fname(get_file_from_url(file))
+                        arr[pkg] = [get_fname(get_file_from_url(file)),
+                                    db_contents[pkg]['version'],
+                                    db_contents[pkg]['description']]
+
                 pkglist.close()
 
-            for i in arr:
+            for i in list(arr.items()):
                 old_str = ""
                 char = []
 
                 if colors:
-                    for j in i.split()[0]:
+                    for j in i:
                         if j in list(query) and j not in char:
                             old_str = old_str+f"\x1b[31;1m{j}\x1b[0m"
                             char.append(j)
                         else:
                             old_str = old_str+j
 
-                    if query not in i.split()[0]:
+                    if query not in i:
                         if is_package_installed(i.split()[0]):
-                            print(f"{old_str} \x1b[32;1m{i.split()[1]}\x1b[0m \x1b[34;1m[installed]\x1b[0m") # pylint: disable=line-too-long
+                            print(f"{old_str} \x1b[32;1m{arr[i][1]}\x1b[0m \x1b[34;1m[installed]\x1b[0m") # pylint: disable=line-too-long
                         else:
-                            print(f"{old_str} \x1b[32;1m{i.split()[1]}\x1b[0m")
+                            print(f"{old_str} \x1b[32;1m{arr[i][1]}\x1b[0m")
                     else:
                         new = f"\x1b[31;1m{query}\x1b[0m"
-                        print(f"{i.split()[0].replace(query, new)} \x1b[32;1m{i.split()[1]}\x1b[0m")
+                        if is_package_installed(i):
+                            print(f"{i.replace(query, new)} \x1b[32;1m{arr[i][1]}\x1b[0m \x1b[34;1m[installed]\x1b[0m") # pylint: disable=line-too-long
+                        else:
+                            print(f"{i.split()[0].replace(query, new)} \x1b[32;1m{arr[i][1]}\x1b[0m") # pylint: disable=line-too-long
                 else:
-                    print(i)
+                    if is_package_installed(i):
+                        print(f"{i} {arr[i][1]} [installed]")
+                    else:
+                        print(f"{i} {arr[i][1]}")
+
+                print(f"└─ {arr[i][2]}")
         except FileNotFoundError:
             if colors:
                 print(f"=> \x1b[33;1mwarning:\x1b[0m database for repo \x1b[34;1m{get_fname(get_file_from_url(file))}\x1b[0m not found so skipping.") # pylint: disable=line-too-long
