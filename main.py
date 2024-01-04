@@ -15,6 +15,7 @@ from toml.decoder import TomlDecodeError
 repos = ['https://raw.githubusercontent.com/Nemesis-OS/packages-release/main/release.PKGLIST'] # pylint: disable=line-too-long
 ACCEPT_NONFREE = False # proprietary programs wont be installed by default
 DISABLE_HASHCHECK = False # hash checking will be enabled by default
+USE_CACHE = True # by default enable caching into /var/nemesis-pkg/$pkg-$ver
 colors = stdout.isatty() # use colors only if it is a tty or not
 
 def parse_config():
@@ -41,6 +42,7 @@ def parse_config():
         # NPKG_ACCEPT_NONFREE -> 0/1
         # NPKG_USE_COLORS -> 0/1
         # NPKG_DISABLE_HASHCHECKS -> 0/1
+        # NPKG_USE_CACHE -> 0/1
 
         if getenv("NPKG_ACCEPT_NONFREE") is not None and getenv("NPKG_ACCEPT_NONFREE") == 1:
             ACCEPT_NONFREE = True
@@ -168,20 +170,20 @@ def search_package(query: str): # pylint: disable=too-many-branches
 
                     if query not in i:
                         if is_package_installed(i.split()[0]):
-                            print(f"{old_str} \x1b[32;1m{arr[i][1]}\x1b[0m \x1b[34;1m[installed]\x1b[0m") # pylint: disable=line-too-long
+                            print(f"\x1b[33;1m{arr[i][0]}\x1b[0m/{old_str} \x1b[32;1m{arr[i][1]}\x1b[0m \x1b[34;1m[installed]\x1b[0m") # pylint: disable=line-too-long
                         else:
-                            print(f"{old_str} \x1b[32;1m{arr[i][1]}\x1b[0m")
+                            print(f"\x1b[33;1m{arr[i][0]}\x1b[0m/\x1b[0m{old_str} \x1b[32;1m{arr[i][1]}\x1b[0m")
                     else:
                         new = f"\x1b[31;1m{query}\x1b[0m"
                         if is_package_installed(i):
-                            print(f"{i.replace(query, new)} \x1b[32;1m{arr[i][1]}\x1b[0m \x1b[34;1m[installed]\x1b[0m") # pylint: disable=line-too-long
+                            print(f"\x1b[33;1m{arr[i][0]}\x1b[0m/{i.replace(query, new)} \x1b[32;1m{arr[i][1]}\x1b[0m \x1b[34;1m[installed]\x1b[0m") # pylint: disable=line-too-long
                         else:
-                            print(f"{i.split()[0].replace(query, new)} \x1b[32;1m{arr[i][1]}\x1b[0m") # pylint: disable=line-too-long
+                            print(f"\x1b[33;1m{arr[i][0]}\x1b[0m/{i.split()[0].replace(query, new)} \x1b[32;1m{arr[i][1]}\x1b[0m") # pylint: disable=line-too-long
                 else:
                     if is_package_installed(i):
-                        print(f"{i} {arr[i][1]} [installed]")
+                        print(f"{arr[i][0]}/{i} {arr[i][1]} [installed]")
                     else:
-                        print(f"{i} {arr[i][1]}")
+                        print(f"{arr[i][0]}/{i} {arr[i][1]}")
 
                 print(f"└─ {arr[i][2]}")
         except FileNotFoundError:
@@ -209,6 +211,63 @@ def is_package_installed(pkg: str):
 
     return False # package has not been found
 
+def install_package(pkgname: str, version: str, hash_check: bool, use_cache: bool, verbose: bool):
+    '''
+    install_package(pkgname, current, True, True)
+    '''
+    if is_package_installed(pkgname):
+        print("=> note: lul is reinstalled")
+
+    # check package is present in which repo
+    pkg_is_in = {}
+    main_repo = ""
+    for i in repos:
+        try:
+            with open(f"/etc/nemesis-pkg/{get_file_from_url(i)}", 'r', encoding="utf-8") as repo_db:
+                if pkgname in list(loads(repo_db.read()).keys()):
+                    pkg_is_in[get_fname(get_file_from_url(i))] = i # take repo name
+
+            repo_db.close()
+        except FileNotFoundError:
+            continue
+
+    if pkg_is_in == {}:
+        if colors:
+            print(f"=> \x1b[31;1merror: \x1b[33;1m{pkgname}\x1b[0m is not found in any repos")
+        else:
+            print(f"=> error: {pkgname} is not found in any repos")
+            
+        return 1
+
+    if len(list(pkg_is_in.keys())) > 1:
+        
+        if colors:
+            print(f"=> \x1b[34;1mnote: \x1b[33;1m{pkgname}\x1b[0m found in multiple repos:")
+        else:
+            print(f"=> note: {pkgname} found in multiple repos:")
+
+        for i in list(pkg_is_in.keys()):
+            print(f' -> {i}')
+
+        rentered = False
+        
+        while True:
+            if colors:
+                if rentered:
+                    main_repo = input(f"=> \x1b[33;1mwarning:\x1b[0m repo \x1b[33;1m{main_repo}\x1b[0m not enabled so enter any enabled repo: ")
+                else:
+                    main_repo = input("=> \x1b[35;1minput:\x1b[0m enter repo: ")
+            else:
+                main_repo = input("=> input: enter repo: ")
+
+            if main_repo in list(pkg_is_in.keys()):
+                break
+            else:
+                rentered = True
+                
+    else:
+        main_repo = list(pkg_is_in.keys())[0]
+    
 if __name__ == "__main__":
     try:
         if len(argv) >= 2:
@@ -230,7 +289,7 @@ ACTIONS nemesis-pkg {h|i|l|s|u|U|v} [...]
                         print('''nemesis-pkg: software package manager
 ACTIONS nemesis-pkg {h|i|l|s|u|U|v} [...]
                     
-  [h]elp\tshow this help message
+  [h]elp\tshow this help messageOA
   [i]nstall\x1b[0m\tinstall the given package
   [l]mist\x1b[0m\tlist all installed packages
   [s]earch\x1b[0m\tsearch for the given package
@@ -246,9 +305,9 @@ ACTIONS nemesis-pkg {h|i|l|s|u|U|v} [...]
                         update_database()
                     else:
                         if colors:
-                            print("=> \x1b[31;1merror:\x1b[0m \x1b[33;1msync\x1b[0m needs to be run as superuser") # pylint: disable=line-too-long
+                            print("=> \x1b[31;1merror:\x1b[0m \x1b[33;1update\x1b[0m needs to be run as superuser") # pylint: disable=line-too-long
                         else:
-                            print("=> errors: sync needs to be run as superuser")
+                            print("=> errors: update needs to be run as superuser")
                 case "-s" | "search" | "--search" | "s" | "[s]earch":
                     if len(argv) >= 3:
                         search_package(argv[2])
@@ -275,16 +334,26 @@ ACTIONS nemesis-pkg {h|i|l|s|u|U|v} [...]
                             print("=> \x1b[31;1merror\x1b[0m: \x1b[33;1minstalled-packages.toml:\x1b[0m no such file or directory") # pylint: disable=line-too-long
                         else:
                             print("=> error: installed-packages.toml: no such file or directory")
+                case "i" | "install" | "-i" | "--install" | "[i]nstall":
+                    verbose_on = False
+                    if "--verbose" in argv or "-v" in argv:
+                        verbose_on = True
+                    
+                    install_package("neofetch","current", True, False, False)
                 case _:
                     if colors:
                         print("=> \x1b[31;1merror:\x1b[0m invalid choice")
                     else:
                         print("=> error: invalid choice")
+
+                    exit(1)
         else:
             if colors:
                 print("=> \x1b[31;1merror:\x1b[0m nemesis-pkg recieved no arguments")
             else:
                 print("=> error: nemesis-pkg recieved no arguments")
+
+            exit(1)
     except KeyboardInterrupt:
         if colors:
             print("=> \x1b[31;1merror:\x1b[0m \x1b[33;1mControl-C\x1b[0m pressed so exiting")
