@@ -215,9 +215,23 @@ def install_package(pkgname: str, version: str, hash_check: bool, use_cache: boo
     '''
     install_package(pkgname, current, True, True)
     '''
-    if is_package_installed(pkgname):
-        print("=> note: lul is reinstalled")
 
+    if verbose and colors:
+        print(f"=> \x1b[34;1minfo:\x1b[0m checking if package \x1b[33;1m{pkgname}\x1b[0m is installed")
+    elif verbose:
+        print(f"=> info: checking if package {pkgname} is installed")
+        
+    if is_package_installed(pkgname):
+        if colors:
+            yn = input(f"=> \x1b[35;1minput:\x1b[0m package \x1b[33;1m{pkgname}\x1b[0m is installed; reinstall? [\x1b[32;1my\x1b[0m/\x1b[31;1mn\x1b[0m] ") # pylint: disable=line-too-long
+        else:
+            yn = input(f"=> input: package {pkgname} is installed; reinstall? [y/n] ")
+
+        if yn not in ["y", "Y", "yes"]:
+            return 0
+        else:
+            pass
+        
     # check package is present in which repo
     pkg_is_in = {}
     main_repo = ""
@@ -267,7 +281,7 @@ def install_package(pkgname: str, version: str, hash_check: bool, use_cache: boo
                 
     else:
         main_repo = list(pkg_is_in.keys())[0]
-    
+
 if __name__ == "__main__":
     try:
         if len(argv) >= 2:
@@ -339,7 +353,7 @@ ACTIONS nemesis-pkg {h|i|l|s|u|U|v} [...]
                     if "--verbose" in argv or "-v" in argv:
                         verbose_on = True
                     
-                    install_package("neofetch","current", True, False, False)
+                    install_package("firefox","current", True, False, verbose_on)
                 case _:
                     if colors:
                         print("=> \x1b[31;1merror:\x1b[0m invalid choice")
