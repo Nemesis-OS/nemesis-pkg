@@ -8,7 +8,7 @@ from os.path import isfile, isdir
 from subprocess import check_output
 from sys import argv, stdout, exit # pylint: disable=redefined-builtin
 from requests import get
-from requests.exceptions import MissingSchema, ConnectTimeout
+from requests.exceptions import MissingSchema, ConnectTimeout, ConnectionError # pylint: disable=redefined-builtin
 from toml import loads
 from toml.decoder import TomlDecodeError
 
@@ -109,9 +109,9 @@ def update_database(): # pylint: disable=inconsistent-return-statements
     for i in repos:
         name = get_fname(get_file_from_url(i))
         if colors:
-            print(f"=> \x1b[34;1minfo:\x1b[0m downloading database for repo \x1b[33;1m{name}\x1b[0m") # pylint: disable=line-too-long
+            print(f"=> \x1b[34;1minfo:\x1b[0m downloading database for repo \x1b[33;1m{name}\x1b[0m", end='\r', flush=True) # pylint: disable=line-too-long
         else:
-            print(f"=> info: downloading database for repo {name}")
+            print(f"=> info: downloading database for repo {name}", flush=True, end='\r')
         try:
             contents = get(i, timeout=60).content.decode('utf-8')
 
@@ -123,9 +123,9 @@ def update_database(): # pylint: disable=inconsistent-return-statements
             repo_file.close()
 
             if colors:
-                print(f"=> \x1b[32;1msuccess:\x1b[0m database for repo \x1b[33;1m{name}\x1b[0m is upto date") # pylint: disable=line-too-long
+                print(f"=> \x1b[32;1msuccess:\x1b[0m database for repo \x1b[33;1m{name}\x1b[0m is upto date", end="\n") # pylint: disable=line-too-long
             else:
-                print(f"=> success: database for repo {name} is upto date")
+                print(f"=> success: database for repo {name} is upto date", end="")
 
         except (MissingSchema, ConnectTimeout, ConnectionAbortedError, ConnectionRefusedError, ConnectionResetError, ConnectionError): # pylint: disable=line-too-long
             if colors:
@@ -223,9 +223,9 @@ def install_package(pkgname: str, version: str, hash_check: bool, use_cache: boo
         
     if is_package_installed(pkgname):
         if colors:
-            yn = input(f"=> \x1b[35;1minput:\x1b[0m package \x1b[33;1m{pkgname}\x1b[0m is installed; reinstall? [\x1b[32;1my\x1b[0m/\x1b[31;1mn\x1b[0m] ") # pylint: disable=line-too-long
+            yn = input(f"=> \x1b[34;1mnote:\x1b[0m package \x1b[33;1m{pkgname}\x1b[0m is installed; reinstall? [\x1b[32;1my\x1b[0m/\x1b[31;1mn\x1b[0m] ") # pylint: disable=line-too-long
         else:
-            yn = input(f"=> input: package {pkgname} is installed; reinstall? [y/n] ")
+            yn = input(f"=> note: package {pkgname} is installed; reinstall? [y/n] ")
 
         if yn not in ["y", "Y", "yes"]:
             return 0
@@ -370,8 +370,8 @@ ACTIONS nemesis-pkg {h|i|l|s|u|U|v} [...]
             exit(1)
     except KeyboardInterrupt:
         if colors:
-            print("=> \x1b[31;1merror:\x1b[0m \x1b[33;1mControl-C\x1b[0m pressed so exiting")
+            print("\n=> \x1b[31;1merror:\x1b[0m \x1b[33;1mControl-C\x1b[0m pressed so exiting")
         else:
-            print("=> error: Control-C pressed so exiting")
+            print("\n=> error: Control-C pressed so exiting")
 
         exit(1)
