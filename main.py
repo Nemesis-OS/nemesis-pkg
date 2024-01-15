@@ -7,14 +7,16 @@ from os import mkdir, getenv, environ, chdir
 from os.path import isfile, isdir
 from subprocess import check_output
 from sys import argv, stdout, exit  # pylint: disable=redefined-builtin
+from shutil import rmtree
 from requests import get
 from requests.exceptions import (
     MissingSchema,
     ConnectTimeout,
-    ConnectionError,
-)  # pylint: disable=redefined-builtin
+    ConnectionError,  # pylint: disable=redefined-builtin
+)
 from toml import loads
 from toml.decoder import TomlDecodeError
+from time import strftime
 
 repos = [
     "https://raw.githubusercontent.com/Nemesis-OS/packages-release/main/release.PKGLIST"
@@ -408,15 +410,21 @@ def install_package(pkgname: str, version: str, hash_check: bool, verbose: bool)
 
     # latest version
     if version == "current":
-        info_toml = info_toml.replace("/current", '')
-        build_src = build_src.replace("/current", '')       
+        info_toml = info_toml.replace("/current", "")
+        build_src = build_src.replace("/current", "")
 
     # now we prepare cache
 
     try:
         mkdir(f"/var/cache/nemesis-pkg/{pkgname}-{version}")
     except FileExistsError:
-        print("idk")
+        # probably ask if they want to reinstall the same binary from cache or not
+        choice = input(
+            """=> would you like to reinstall or rebuild? [1/2]
+ -> 1. reinstall the same binary
+ -> 2. rebuild the binary from scratch
+=> choice: """
+        )
     except FileNotFoundError:
         if colors:
             print(
@@ -425,10 +433,23 @@ def install_package(pkgname: str, version: str, hash_check: bool, verbose: bool)
         else:
             print("=> warning: /var/cache/nemesis-pkg not found so making it")
 
-        mkdir(f"/var/cache/nemesis-pkg")
+        mkdir("/var/cache/nemesis-pkg")
         mkdir(f"/var/cache/nemesis-pkg/{pkgname}-{version}")
 
     chdir(f"/var/cache/nemesis-pkg/{pkgname}-{version}")
+
+    # set env vars
+    mkdir("dest")
+    environ["dest"] = f"/var/cache/nemesis-pkg/{pkgname}-{version}/dest"
+
+    # if cache is false or pkg in uncache
+    # then delete pkg from the filesystem
+    if cache["cache"] is False or pkgname in cache["uncache"]:
+        rmtree(f"/var/cache/nemesis-pkg/{pkgname}-{version}")
+
+    # post cleanup
+    del environ["dest"]  # remove dest env var
+
 
 if __name__ == "__main__":
     try:
@@ -524,6 +545,20 @@ ACTIONS nemesis-pkg {h|i|l|s|u|U|v} [...]
                             )
                         else:
                             print("=> error: install needs to be run as superuser")
+
+                        exit(1)
+
+                    if len(argv[2:]) == 0:
+                        if colors:
+                            print(
+                                "=> \x1b[34;1musage:\x1b[0m nemesis-pkg install \x1b[33;1mpackage\x1b[0m"
+                            )
+                            print(
+                                "=> \x1b[31;1merror:\x1b[0m expected \x1b[33;1m1\x1b[0m, got \x1b[33;1m0\x1b[0m"
+                            )
+                        else:
+                            print("=> usage: nemesis-pkg install package")
+                            print("=> error: expected 1 argument, got 0")
 
                         exit(1)
 
