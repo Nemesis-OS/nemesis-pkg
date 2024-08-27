@@ -18,3 +18,6 @@ A fast and simple package manager for Nemesis inspired from `kiss` and `pacman`.
 - [`kiss`](https://github.com/kisslinux/kiss) - for its simplicity/user friendliness
 - [`pacman`](gitlab.archlinux.org/pacman/pacman) - for its search implementation
 - [`nala`](https://github.com/volitank/nala) - for the log idea
+
+# NOTE: nemesis-pkg in python will no longer be used as a new npkg is being made in Lua(faster and better)
+# SOURCE: https://git.sr.ht/~abrik1/nemesis-pkg
