@@ -8,25 +8,25 @@
 version = 0.1
 
 require "colorize"
-require "levenshtein"
 require "json"
 
 # colors
 Colorize.enabled = Colorize.on_tty_only!()
-
-# load files, first we check if they exist
-unless File.exists?("/etc/nemesis-pkg/config.json") && File.exists?("/etc/nemesis-pkg/pkgdata.json") 
-    puts "=> #{"error:".colorize(:red)} neccesary files not found."
-    Process.exit(1)
-end
 
 # arguement parser
 begin
     if ARGV[0] == "version" || ARGV[0] == "v"
         puts "=> npkg-query #{version}"
         puts "=> built by Crystal #{Crystal::VERSION} for #{Crystal::HOST_TRIPLE}"
+    else
+        unless ARGV[0] == nil
+            puts "=> #{"error:".colorize(:light_red)} available args are #{["help", "list", "search", "version"].colorize(:magenta)}"
+        else
+            puts "=> #{"error:".colorize(:light_red)} no arg specified"
+        end
+        Process.exit(1)
     end
 rescue
-    puts "=> #{"error:".colorize(:red)} some error occured."
+    puts "=> #{"error:".colorize(:light_red)} some error occured."
     Process.exit(1)
 end
